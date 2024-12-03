@@ -1,0 +1,77 @@
+//////////
+// 08/10/2024
+// Quentin Chaboche
+//
+// Last Update: 04/11/2024
+//////////
+
+This set of functions allow to extract from an image
+- the vector field
+- the position, charge and orientation of topological defects
+- the splay-bend anisotropy e=(k1-k3)/(k1+k3) associated to each defect
+- includes a little interface to tune the detection parameter, see the example.
+
+Take a look at the example (Example.ipy)!
+(And please be patient with the sliders, computations can take a few seconds)
+
+
+Now we describe:
+1. Required Packages
+2. Desciption of the main function, inputs and outputs
+3. Desciption of the interface functions
+
+
+////Required Packages////
+
+- Standard Python libraries (numpy, matplotlib, pandas, scipy -> no installation required)
+- trackpy
+- scikit image (version >=0.18)
+
+Install running on a python or anaconda prompt (a good practice is to create a dedicated conda environnement)
+> conda install -c conda-forge trackpy
+or
+> pip install trackpy
+
+and
+> conda install scikit-image
+or
+> pip install -U scikit-image
+
+
+////Description////
+
+The main function to call is defect_analyzer in the script chained_defects.
+It takes an image and detection parameters, compute the vector field, find the defects and compute their anisotropy.
+It displays an interface that allows to check and modify the parameters before validating the whole computation.
+It is called by typing:
+>from chained_defects import defect_analyzer
+>defect_tab, f_out, R_out, order_out = defect_analyzer(imgpath, f_in, R_in, stack=True)
+
+
+INPUTS
+imgpath: path to the image to analyze
+f_in: typical size (in px) of a characteristic feature for orientation field computation. The vector field is computed on a window of sigma=1.5*f_in. For a cell monolayer this can be the width.
+R_in: Radius of the contour on which the anisotropy is computed. In this region, the orientation field should only be distorted by the defect.
+stack: boolean. Is the image a stack?
+
+OUTPUTS
+defect_tab: pandas dataframe with characteristics of the defects (charge, position, axis, anisotropy,...)
+f_out: Size of characteristic feature chosen through interface
+R_out: Size of contour radius chosen through interface
+order_out: Threshold of order parameter for the detectino of defects
+
+////Interface functions////
+SLIDERS
+Radius of detection [px]: update the radius of detection in pixel. This adjusts the value of anisotropy.
+Feature size [px]: update the size of the characteristic feature in pixel. This adjusts the vector field and detectino of defects (position and orientation)
+Threshold: Threshold of the nematic order_parameter for the detection of defect. If a region has an order smaller than the threshold, there is a defect. 
+
+BUTTONS
+R-detection: Show/Hide around the defects the radius of contour.
+Director: Show/Hide the computed director field.
+Reset: Reset the slider values to their original values.
+OK: Accept these parameter values. The figure is closed and the chosen values returned.
+Save Image: Saves the current display on a chosen folder.
+
+
+For more details go to the ScriptDescriptions.txt or to the documentation of functions.

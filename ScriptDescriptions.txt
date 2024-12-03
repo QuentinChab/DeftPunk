@@ -1,0 +1,68 @@
+//////////
+// 08/10/2024
+// Quentin Chaboche
+//////////
+Description of all the files in alphabetical order
+
+////ref_epsilon////
+contains reference angular profiles (director field as a function of azimuthal angle) for a +1/2 topological defect, for many values or anisotropy. 
+For performance, it is better to have them stored.
+
+////20240215_Actin_Only_8_tif.tif////
+TIF image of actin plated on flat substrate. Provided by Gwendal.
+
+////anisotropy_functions.py////
+Toolbox to compute anisotropy. Perform the basic tasks related to this purpose.
+Contains functions:
+- rotation: rotate a vector field
+- compute_angle_diagram: for anisotropy detection. Extract director as a function of azimuthal angle on a given field
+- anisotropy_comparison:from an angle diagram, fit the anisotropy
+- orientation: from anisotropy of defect and azimuthal angle around it, compute the corresponding director angle
+- make_vfield:make a vector field of given size with a defect of given anisotropy
+- crop_anf_rotate: crop a vector field region and rotate it
+
+////chained_defect.py////
+Contains the function coding for the GUI. It also binds detection parameters together to reduce them to 2.
+Contains:
+- defect_analyzer: from a path and initial parameters, launches the analysis with user confirmation.
+
+////compute_anisotropy.py////
+Handles the images and uses the functions from anisotropy_functions to detect and list their defects. Also contains plotting functions.
+Contains:
+- one_defect_anisotropy: from a field containing one defect at known position, compute its anisotropy
+- get_anisotropy: from an image or a stack, compute vector field, detect defect position, orientation and anisotropy and return everything as a DataFrame.
+- anisotropy_on_directory: input a directory and detection parameters.The defects positions, orientations and anisotropy are detected for each file in the directory [outdated]
+- reference_profile: give the theoretical angular profile corresponding to an input anisotropy
+- plot_defect_map: from defect info, plot the map with defects
+- plot_profiles: plotting function. I Don't remember of what exactly
+- trackmap: from defect DataFrame, plot the map of defects and their trajectory
+- temporal analysis: analysis defect characteristics from defect DataFrame.
+- plot_indexed_map: i Don't remember
+- gauss: gaussian function
+- plot_hist_movie:for each fram in the defect DataFrame,plot the histrogram at each frame and make a tif stack out of it
+
+////detect_defects.py////
+From a vector field and detection parameter, compute the charge, position and orientation of defects
+Contains:
+- defect_detection:do all of the above
+- FindParametrizedCircle: outdated. Not used anymore.
+
+////Example.ipy////
+Example script on how to use the defect_analyzer function, with an actin image.
+It is written for spyder.
+
+////HowToUseMe.txt////
+Basic hands on (?) description on how to use the defect_analyzer function.
+
+////OrientationPy.py////
+From an image, compute director field
+Contains:
+- orientation_analysis:does the above
+- plot_field: plot the vector field on top of the provided image
+
+////zebra_skin.tif////
+TIF stack of a zebra fish embryon nostril formation. Provided by Isabelle Bonnet.
+
+////ScriptDescription////
+If you are there, you already know everything that is on that file. So as a reward here is a game where you have to fill a form
+https://userinyerface.com/
