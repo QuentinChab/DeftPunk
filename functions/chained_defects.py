@@ -9,7 +9,7 @@ It's the highest function of the hierarchy: it only treats interface
 """
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.widgets import Button, Slider
+from matplotlib.widgets import Button, Slider, CheckButtons
 import pandas as pd
 import compute_anisotropy as can
 import anisotropy_functions as fan
@@ -19,6 +19,7 @@ import matplotlib.patheffects as pe
 from matplotlib.colors import Normalize
 from tkinter import filedialog
 import trackpy as tp
+from matplotlib.animation import ArtistAnimation, FuncAnimation
 import os
 
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
@@ -579,7 +580,7 @@ def defect_statistics(df, minframe=0, maxframe=np.inf, filt=0, minspace=0):
         efrstd = np.empty(len(frs))*np.nan
         for i in range(len(frs)):
             efr[i] = np.mean(df['Anisotropy'][df['frame']==frs[i]])
-            efr[i] = np.std(df['Anisotropy'][df['frame']==frs[i]])
+            efrstd[i] = np.std(df['Anisotropy'][df['frame']==frs[i]])
         plt.figure()
         plt.errorbar(frs, efr, efrstd, fmt='.')
         plt.ylabel('Avergae anisotropy on a frame')
@@ -593,104 +594,316 @@ def defect_statistics(df, minframe=0, maxframe=np.inf, filt=0, minspace=0):
         
         
 
-def check_tracking(imgpath, deftab):
+def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
+    global quiver_artist
+    global quiverM1
+    global quiverM2
+    global quiverM3
     if imgpath[-3:]=='tif':
         img_st = tf.imread(imgpath)
     else:
         img_st = plt.imread(imgpath)
     
-    # if it is a multichannel image (color), average the channels 
+    # if it is a multichannel image (color), take the first one 
 
     if img_st.ndim>3:
-        img_st = np.nanmean(img_st, axis=3) #if we have several intensity channels average them
-    img = img_st[0]
+        img_st = img_st[:,0,:,:] #if we have several intensity channels take the first one
+    img = img_st[0,:,:]
 
+    #plt.figure()
+    fig =  plt.figure()
+    #plt.imshow(img, cmap='binary')
     
-    fig, ax = plt.subplots()
-    plt.imshow(img, cmap='binary')
+    #Initial slider value. /!\ DO NOT CORRESPOND NECESSARILY TO INITIAL TRACKING VALUES
+    if searchR is None:
+        if np.sum(np.logical_not(np.isnan(deftab['MinDist'])))>2:
+            searchR = 4*np.nanmean(deftab['MinDist'])
+        else:
+            searchR = np.mean(img.shape)/4
+    if memory is None:
+        memory = max(round(len(np.unique(deftab['frame']))/15), 2)
+    
+    ani = [None]
+    
+    #sort the defects
+    ptab = deftab[deftab['charge']==0.5]
+    mtab = deftab[deftab['charge']==-0.5]
+    otab = deftab[np.abs(deftab['charge'])!=0.5]
+    deftab = pd.concat([ptab, mtab, otab])
+    deftab = deftab.reset_index(drop=True)
+    
+    ### Start animation button
+    
+    loopax = fig.add_axes([0.05, 0.025, 0.1, 0.04])
+    loopbutton = CheckButtons(loopax, 'Loop Movie')
+    
+    startax = fig.add_axes([0.5, 0.025, 0.1, 0.04])
+    startbutton = Button(startax, 'Preview video', hovercolor='0.975')
+    dataax = fig.add_axes([0.8, 0.025, 0.1, 0.04])
+    databutton = Button(dataax, 'Save Dataset', hovercolor='0.975')
+    movieax = fig.add_axes([0.2, 0.025, 0.1, 0.04])
+    moviebutton = Button(movieax, 'Save movie', hovercolor='0.975')
+    
+    def Start_Animation(event):
+        global quiver_artist
+        global quiverM1
+        global quiverM2
+        global quiverM3
+        #plt.figure()
+        figA, axA = plt.subplots()
+        img_artist = axA.imshow(img_st[0,:,:], cmap='binary', animated=True)
+        
+        defframe = deftab[deftab['frame']==0]
+        
+        lim = 0.5
+        e_map = 'PiYG'
+        colorm = cm.get_cmap(e_map)
+        defP = defframe[defframe['charge']==0.5]
+        centroidsP = np.array([defP['y'], defP['x']]).transpose()
+        axisP = np.array(defP['axis'])
+        c = colorm(np.array(defP['Anisotropy'])/2/lim+0.5)
+        quiver_artist = axA.quiver(centroidsP[:,1], centroidsP[:,0], np.cos(axisP), np.sin(axisP), angles='xy', color=c, edgecolor='k', linewidth=1)
+        
+        defM = defframe[defframe['charge']==-0.5]
+        centroidsM = np.array([defM['y'], defM['x']]).transpose()
+        axisM = np.array(defM['axis'])
+        minuscolor = 'cornflowerblue'
+        quiverM1 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM), np.sin(axisM), angles='xy', color=minuscolor)
+        quiverM2 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM+2*np.pi/3), np.sin(axisM+2*np.pi/3), angles='xy', color=minuscolor)
+        quiverM3 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM-2*np.pi/3), np.sin(axisM-2*np.pi/3), angles='xy', color=minuscolor)
+        
+        trajdata_x = [ [] for _ in range(np.max(deftab['particle'])) ]
+        trajdata_y = [ [] for _ in range(np.max(deftab['particle'])) ]
+        traj_artist = [None]*np.max(deftab['particle'])
+        #print(trajdata_x)
+        defpart = np.unique(defframe['particle'])
+        for i in range(len(defpart)):
+            trajdata_x[defpart[i]].append(float(defframe['x'][defframe['particle']==defpart[i]]))
+            trajdata_y[defpart[i]].append(float(defframe['y'][defframe['particle']==defpart[i]]))
+            traj_artist[defpart[i]], = plt.plot(trajdata_x[defpart[i]], trajdata_y[defpart[i]])
+            #print(trajdata_x[defpart[i]])
+        
+        #art_list = add_points(axA, deftab, 0, animated=True)
+        ## create all frames
+        #arts = []
+        # for i in range(len(img_st)):
+        #     im = axA.imshow(img_st[i,:,:], cmap='binary', animated=True)
+        #     art_list = add_points(axA, deftab, i, animated=True)
+        #     arts.append([im, *art_list])
+            # arts_list = []
+        
+        def update(frame):
+            global quiver_artist
+            global quiverM1
+            global quiverM2
+            global quiverM3
+            img_artist.set_array(img_st[frame,:,:])
+            
+            defframe = deftab[deftab['frame']==frame]
+            
+            quiver_artist.remove()
+            quiverM1.remove()
+            quiverM2.remove()
+            quiverM3.remove()
+            
+            defP = defframe[defframe['charge']==0.5]
+            centroidsP = np.array([defP['y'], defP['x']]).transpose()
+            axisP = np.array(defP['axis'])
+            c = colorm(np.array(defP['Anisotropy'])/2/lim+0.5)
+            quiver_artist = axA.quiver(centroidsP[:,1], centroidsP[:,0], np.cos(axisP), np.sin(axisP), angles='xy', color=c, edgecolor='k', linewidth=1)
+            
+            defM = defframe[defframe['charge']==-0.5]
+            centroidsM = np.array([defM['y'], defM['x']]).transpose()
+            axisM = np.array(defM['axis'])
+            minuscolor = 'cornflowerblue'
+            quiverM1 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM), np.sin(axisM), angles='xy', color=minuscolor)
+            quiverM2 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM+2*np.pi/3), np.sin(axisM+2*np.pi/3), angles='xy', color=minuscolor)
+            quiverM3 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM-2*np.pi/3), np.sin(axisM-2*np.pi/3), angles='xy', color=minuscolor)
+            
+            defpart = np.unique(defframe['particle'])
+            for i in range(len(defpart)):
+                trajdata_x[defpart[i]].append(float(defframe['x'][defframe['particle']==defpart[i]]))
+                trajdata_y[defpart[i]].append(float(defframe['y'][defframe['particle']==defpart[i]]))
+                #print(trajdata_x[defpart[i]])
+                if not (traj_artist[defpart[i]] is None):
+                    traj_artist[defpart[i]].set_data(trajdata_x[defpart[i]], trajdata_y[defpart[i]])
+            
+            # if 'art_list' in globals():
+            #     for j in range(len(art_list)):
+            #         if art_list[j] is not None:
+            #             art_list[j].remove()
+            
+            
+            # art_list_temp = add_points(axA, deftab, frame, animated=True)
+            # for j in range(max(len(art_list), len(art_list_temp))):
+            #     if j<len(art_list):
+            #         if j<len(art_list_temp):
+            #             art_list[j] = art_list_temp[j]
+            #         else:
+            #             art_list[j] = None
+            #     else:
+            #         art_list.append(art_list_temp[j])
+                    
+            return [img_artist, quiver_artist, quiverM1, quiverM2, quiverM3, *traj_artist]
+        
+        ## Start the animation
+        #ani[0] = ArtistAnimation(figA, arts, interval=5, blit=False, repeat=loopbutton.get_active())
+        ani[0] = FuncAnimation(figA, update, frames=range(len(img_st)), interval=5, blit=False, repeat=False)#loopbutton.get_active())
+        
+        # while plt.fignum_exists(figA.number):
+        #     plt.pause(0.1)
+    
+    def save_data(event):
+        fold = filedialog.asksaveasfilename(defaultextension='.csv') # the user choses a place in file explorer
+        deftab.to_csv(fold.name) # the DataFrame is saved as csv
+    
+    def save_movie(event):
+        fold = filedialog.asksaveasfilename(defaultextension='.mp4') # the user choses a place in file explorer
+        ani[0].save(fold.name, fps=30, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as csv
+    
+    startbutton.on_clicked(Start_Animation)
+    databutton.on_clicked(save_data)
+    moviebutton.on_clicked(save_movie)
+    
+    ### Memory slider
+    axmem = fig.add_axes([0.1, 0.25, 0.0225, 0.63])
+    memslider = Slider(
+        ax=axmem,
+        label="Memory",
+        valmin=1,
+        valmax=round(len(np.unique(deftab['frame']))/4),
+        valinit=memory,
+        valstep=1,
+        orientation="vertical"
+    )    
+    
+    ### searchR slider
+    
+    axsearch = fig.add_axes([0.15, 0.25, 0.0225, 0.63])
+    searchslider = Slider(
+        ax=axsearch,
+        label="search range",
+        valmin=1,
+        valmax=round(max(img.shape)/4),
+        valinit=searchR,
+        valstep=1,
+        orientation="vertical"
+    )    
+    
+    def change_tracking(val):
+        tp.quiet()
+        
+        ptab = deftab[deftab['charge']==0.5]
+        mtab = deftab[deftab['charge']==-0.5]
+        otab = deftab[np.abs(deftab['charge'])!=0.5]
+        
+        ptab = tp.link(ptab, search_range=searchslider.val, memory=memslider.val)
+        mtab = tp.link(mtab, search_range=searchslider.val, memory=memslider.val)
+        otab = tp.link(otab, search_range=searchslider.val, memory=memslider.val)
+        
+        # prevent the particle number to be redundant
+        mtab['particle'] = mtab['particle'] + np.max(ptab['particle']) +1
+        otab['particle'] = otab['particle'] + np.max(mtab['particle']) +1
+        
+        deftab['particle'] = [*ptab['particle'], *mtab['particle'], *otab['particle']]
+    
+    searchslider.on_changed(change_tracking)
+    memslider.on_changed(change_tracking)
     
     
+    
+    while plt.fignum_exists(fig.number):
+         plt.pause(0.1)
+        
+        
+    
+def add_points(ax, all_data, frame, plot_cbar=False, animated=False):
+    
+    """
+    Draw on ax the defects passed on defect_df
+
+    Parameters
+    ----------
+    ax : axes
+        Axis on which to draw the defects and annotations.
+    defect_df : DataFrame
+        Contains defects information. It minimally has the columns
+        'charge', 'Anisotropy', 'axis', 'x' and 'y'
+    plot_cbar : Bool, optional
+        Do you plot the colorbar? The default is False.
+
+    Returns
+    -------
+    artists_vec : list of Objects
+        Objects newly drawn on the ax. It does not include R-contour
+    R_vec : list of Objects
+        List of new R-contours.
+
+    """
+    # get xlim and ylim because changing axis will change display range
+    current_xlim = ax.get_xlim()
+    current_ylim = ax.get_ylim()
+    
+    defect_df = all_data[all_data['frame']==frame]
+    all_data = all_data[all_data['frame']<=frame]
+    
+    chargedef = np.array(defect_df['charge'])
+    centroids = np.array([defect_df['y'], defect_df['x']]).transpose()
+    es = np.array(defect_df['Anisotropy'])
+    axisdef = np.array(defect_df['axis'])
+    
+    # arrows and annotations will be stored in artists_vec
+    # length is Ndef + 2 artists per -1/2 defect, + 1 annotation per +1/2 + number of trajectories + colorbar
+    artists_vec = [None]*(len(chargedef)+2*np.sum(np.abs(chargedef+0.5)<0.1)+np.sum(np.abs(chargedef-0.5)<0.1)+len(np.unique(all_data['particle']))+plot_cbar)
+    
+    # because the number of objects in artists_def is higher than number of defects
+    lim = 0.5
     e_map = 'PiYG'
     colorm = cm.get_cmap(e_map)
-    lim = 0.5 # limits of anisotropy colorbar
-    # function that plots points
-    def add_points(ax, all_data, f, frame, plot_cbar=False):
-        """
-        Draw on ax the defects passed on defect_df
+    incr = 0
+    for i in range(len(chargedef)):
+        if np.abs(chargedef[i]-1/2)<0.1:
+            c = colorm(es[i]/2/lim+0.5)
+            artists_vec[incr] = ax.annotate('%.2f'%(es[i]), (centroids[i,1], centroids[i,0]),
+                        color = c, fontsize='small', path_effects=[pe.withStroke(linewidth=1, foreground="k")])
+  
+            artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), angles='xy', color=c, edgecolor='k', linewidth=1)
+            incr += 2
+        elif np.abs(chargedef[i]+1/2)<0.1:
+            minuscolor = 'cornflowerblue'
+            artists_vec[incr] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), angles='xy', color=minuscolor)
+            artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]+2*np.pi/3), np.sin(axisdef[i]+2*np.pi/3), angles='xy', color=minuscolor)
+            artists_vec[incr+2] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]-2*np.pi/3), np.sin(axisdef[i]-2*np.pi/3), angles='xy', color=minuscolor)
+            incr+=3
+        elif np.abs(chargedef[i]+1)<0.1:
+            artists_vec[incr] = ax.plot(centroids[i,1], centroids[i,0], 'o', color = 'orange')
+            incr += 1
+        elif np.abs(chargedef[i]-1)<0.1:
+            artists_vec[incr] = ax.plot(centroids[i,1], centroids[i,0], 'o', color = 'purple')
+            incr += 1
+        else:
+            #plt.plot(centroids[i,1], centroids[i,0], 'o', color = cother)
+            incr+=1
 
-        Parameters
-        ----------
-        ax : axes
-            Axis on which to draw the defects and annotations.
-        defect_df : DataFrame
-            Contains defects information. It minimally has the columns
-            'charge', 'Anisotropy', 'axis', 'x' and 'y'
-        plot_cbar : Bool, optional
-            Do you plot the colorbar? The default is False.
-
-        Returns
-        -------
-        artists_vec : list of Objects
-            Objects newly drawn on the ax. It does not include R-contour
-        R_vec : list of Objects
-            List of new R-contours.
-
-        """
-        # get xlim and ylim because changing axis will change display range
-        current_xlim = ax.get_xlim()
-        current_ylim = ax.get_ylim()
-        
-        defect_df = all_data[all_data['frame']==frame]
-        all_data = all_data[all_data['frame']<=frame]
-        
-        chargedef = defect_df['charge']
-        centroids = np.array([defect_df['y'], defect_df['x']]).transpose()
-        es = defect_df['Anisotropy']
-        axisdef = defect_df['axis']
-        
-        # arrows and annotations will be stored in artists_vec
-        # it will be used to change visibility and possibly remove them
-        artists_vec = [None]*(2*len(chargedef)+2*np.sum(np.abs(chargedef+0.5)<0.1))
-        
-        # because the number of objects in artists_def is higher than number of defects
-        incr = 0
-        for i in range(len(chargedef)):
-            if np.abs(chargedef[i]-1/2)<0.1:
-                c = colorm(es[i]/2/lim+0.5)
-                artists_vec[incr] = ax.annotate('%.2f'%(es[i]), (centroids[i,1], centroids[i,0]),
-                            color = c, fontsize='small', path_effects=[pe.withStroke(linewidth=1, foreground="k")])
-      
-                artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), angles='xy', color=c, edgecolor='k', linewidth=1)
-                incr += 2
-            elif np.abs(chargedef[i]+1/2)<0.1:
-                minuscolor = 'cornflowerblue'
-                artists_vec[incr] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), angles='xy', color=minuscolor)
-                artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]+2*np.pi/3), np.sin(axisdef[i]+2*np.pi/3), angles='xy', color=minuscolor)
-                artists_vec[incr+2] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]-2*np.pi/3), np.sin(axisdef[i]-2*np.pi/3), angles='xy', color=minuscolor)
-                incr+=3
-            elif np.abs(chargedef[i]+1)<0.1:
-                artists_vec[incr] = ax.plot(centroids[i,1], centroids[i,0], 'o', color = 'orange')
-                incr += 1
-            elif np.abs(chargedef[i]-1)<0.1:
-                incr += 1
-                artists_vec[incr] = ax.plot(centroids[i,1], centroids[i,0], 'o', color = 'purple')
-            #else:
-                #plt.plot(centroids[i,1], centroids[i,0], 'o', color = cother)
+    if plot_cbar:
+        artists_vec[incr] = plt.colorbar(cm.ScalarMappable(norm=Normalize(-lim, lim), cmap=e_map), ax=ax, label='Splay-Bend Anisotropy []')
+        incr += 1
     
-        if plot_cbar:
-            plt.colorbar(cm.ScalarMappable(norm=Normalize(-lim, lim), cmap=e_map), ax=ax, label='Splay-Bend Anisotropy []')
+    trajs = np.unique(all_data['particle'])
+    for i in range(len(trajs)):
+        indices = all_data['frame']==trajs[i]
+        artists_vec[incr] = plt.plot(all_data['x'][indices], all_data['y'][indices])
+        incr+=1
         
-        # set back to old display range
-        new_xlim = ax.get_xlim()
-        new_ylim = ax.get_ylim()
-        if new_xlim[0]<current_xlim[0] or new_xlim[1]>current_xlim[1]: 
-            ax.set_xlim(current_xlim)
-        if new_ylim[0]>current_ylim[0] or new_ylim[1]<current_ylim[1]: 
-            ax.set_ylim(current_ylim)
-        
-        return artists_vec
-
-
+    # set back to old display range
+    new_xlim = ax.get_xlim()
+    new_ylim = ax.get_ylim()
+    if new_xlim[0]<current_xlim[0] or new_xlim[1]>current_xlim[1]: 
+        ax.set_xlim(current_xlim)
+    if new_ylim[0]>current_ylim[0] or new_ylim[1]<current_ylim[1]: 
+        ax.set_ylim(current_ylim)
+    
+    return artists_vec
 
 
 
