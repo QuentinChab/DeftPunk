@@ -21,36 +21,36 @@ Please be patient with the sliders, computations can take a few seconds
 # Where are you storing the folder?
 function_directory = r'./'
 # path to the image to analyze
-path = function_directory + r'20240215_Actin_Only_8_tif.tif'
+path = r'C:\Users\Quentin\Documents\Experiments\zebra_skin_data\previous\zebra_skin.tif'
 # Say wether the image is a stack
-stack = False
+stack = True
 
 # Initial detection parameters. Their can be modified when function is executed
 
 # The size in pixels of a typical feature of the system. This is used to compute the
 #   vector field. It corresponds to the sigma parameter of OrientationJ (divided by 1.5)
 #   For cell monolayer, you can take the width 
-feature_in = 16
+feature_in = 32
 
 # Radius of detection for anisotropy. Around a +1/2 defect, we take the director 
 #   angle as a function of azimuthal angle at a distance Rdet. This is a 
 #   signature of splay-bend anisotropy.
-Rdet_in = 16
-
+Rdet_in = 60
+frame = 15
 
 
 
 ######## Import necessary packages ########
 import numpy as np
 import sys
-sys.path.append(function_directory+'/functions/')
+sys.path.append(function_directory+'functions/')
 from chained_defects import defect_analyzer # import our function
 
 
 
 
 ######### Call the function #########
-def_tab, f_out, R_out, order_out = defect_analyzer(path, feature_in, Rdet_in, stack=stack)
+def_tab, f_out, R_out, order_out = defect_analyzer(path, feature_in, Rdet_in, stack=stack, frame=frame)
 
 print('You chose a feature size of %.0f px, a threshold for order parameter of %.2f and a detection radius of %.0f px'%(f_out, order_out, R_out))
 print('There is a total of %.0f +1/2 defects and %.0f -1/2 defects.'%(np.sum(def_tab['charge']==1/2), np.sum(def_tab['charge']==-1/2)))

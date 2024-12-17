@@ -157,6 +157,23 @@ def one_defect_anisotropy(field, R=np.nan, xc=None, yc=None, axis = 0, err = 0.0
         
     return emin, err_e, costmin, th_min
     
+def track_by_charge(df, searchR, mem):
+    ch = df['charge']
+    minc = round(2*ch.min())/2
+    maxc = round(2*ch.max())/2
+    charray = np.arange(minc, maxc+0.5, 1/2)
+    df['particle'] = np.nan
+    for k in range(len(charray)):
+        cond = np.abs(df['charge']-charray[k])<0.25
+        if np.sum(cond)>2:
+            linkeddf = tp.link_df(df[cond], search_range=searchR, memory=mem, pos_columns=['x', 'y'])
+            if np.any(np.logical_not(np.isnan(df['particle']))):
+                minpart = np.nanmax(df['particle'])
+            else:
+                minpart = 0
+            df.loc[cond, 'particle']  = minpart + 1 + linkeddf['particle']
+        
+    return df
 
     
 def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, BoxSize=8, order_threshold=0.25, peak_threshold=0.85, plotit=False, stack=False, savedir = None, give_field=False):
@@ -323,6 +340,8 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, B
                     index = index + 1
             defectdf['MinDist'] = closest_neighbor
             tp.quiet()
+                        
+            
             if defectdf.empty:
                 defectdf['particle'] = np.ones(len(defectdf))*np.nan
             else:
@@ -334,12 +353,13 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, B
                     searchR = 2*np.nanmin(closest_neighbor) # otherwise use the distance to closest neighbor as metric
                     print('tracking with closest neighbor*2: %.1f'%(searchR))
                 try:
-                    defectdf = tp.link_df(defectdf, search_range=searchR, memory=memory, pos_columns=['x', 'y'])
-                
+                    #defectdf = tp.link_df(defectdf, search_range=searchR, memory=memory, pos_columns=['x', 'y'])
+                    defectdf = track_by_charge(defectdf, searchR, memory)
                 except tp.SubnetOversizeException:
                     searchR = searchR/2
                     print('hehe actually printing with half of that')
-                    defectdf = tp.link_df(defectdf, search_range=searchR, memory=memory, pos_columns=['x', 'y'])
+                    #defectdf = tp.link_df(defectdf, search_range=searchR, memory=memory, pos_columns=['x', 'y'])
+                    defectdf = track_by_charge(defectdf, searchR, memory)
             
             return e_stack, err_stack, cost_stack, theta_stack, phi_stack, defectdf#defect_char_stack
                 
@@ -465,8 +485,8 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, B
     incr = 0
     for di in range(len(defect_char)):
         if chargeb[di]==0.5: 
-            defect_char['Anisotropy'][di] = e_vec[incr]
-            defect_char['Error'][di] = err_vec[incr]
+            defect_char.loc[di, 'Anisotropy'] = e_vec[incr]
+            defect_char.loc[di, 'Error'] = err_vec[incr]
             incr +=1
             
     

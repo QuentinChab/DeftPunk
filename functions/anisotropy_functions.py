@@ -43,7 +43,7 @@ def compute_angle_diagram(orientation, R, center=None, axis=0, sym= False, plott
     #if x is None:
     x = np.arange(0, s[1])
     y = np.arange(0, s[0])
-    if center is None:
+    if (center is None) or (center[0] is None):
         #assume it is in the middle
         center = [(s[1])/2, (s[0])/2]
         

@@ -24,6 +24,7 @@ import os
 
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
+
 bin_factor = 4
 
 def defect_analyzer(imgpath, w, R, stack=True, frame=0):
@@ -558,7 +559,7 @@ def defect_statistics(df, minframe=0, maxframe=np.inf, filt=0, minspace=0):
     plt.xlabel('Anisotropy')
     plt.ylabel('Occurence')
     plt.xlim([-1,1])
-    plt.title('Average %.0f defects: $<e>=%.2f\pm %.2f$'%(len(df), emean, estd))
+    plt.title('Average %.0f defects: $<e>=%.2f\\pm %.2f$'%(len(df), emean, estd))
     plt.tight_layout()
     
     if 'frame' in df.columns:
@@ -571,7 +572,7 @@ def defect_statistics(df, minframe=0, maxframe=np.inf, filt=0, minspace=0):
         plt.xlabel('Avergae anisotropy on a trajectory')
         plt.ylabel('Occurence')
         plt.xlim([-1,1])
-        plt.title('Average over %.0f traj: $<e>=%.2f\pm %.2f$'%(len(trajs), np.nanmean(etraj), np.nanstd(etraj)))
+        plt.title('Average over %.0f traj: $<e>=%.2f\\pm %.2f$'%(len(trajs), np.nanmean(etraj), np.nanstd(etraj)))
         plt.tight_layout()
         
         
@@ -594,15 +595,22 @@ def defect_statistics(df, minframe=0, maxframe=np.inf, filt=0, minspace=0):
         
         
 
-def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
+def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
     global quiver_artist
     global quiverM1
     global quiverM2
     global quiverM3
+    global traj_artist
+    global loop
+    global deftab
+    loop = False
     if imgpath[-3:]=='tif':
         img_st = tf.imread(imgpath)
     else:
         img_st = plt.imread(imgpath)
+    
+    deftab_raw = deftab_
+    deftab = tp.filter_stubs(deftab_raw, filt)
     
     # if it is a multichannel image (color), take the first one 
 
@@ -629,35 +637,42 @@ def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
     ptab = deftab[deftab['charge']==0.5]
     mtab = deftab[deftab['charge']==-0.5]
     otab = deftab[np.abs(deftab['charge'])!=0.5]
+    
     deftab = pd.concat([ptab, mtab, otab])
     deftab = deftab.reset_index(drop=True)
-    
     ### Start animation button
     
-    loopax = fig.add_axes([0.05, 0.025, 0.1, 0.04])
-    loopbutton = CheckButtons(loopax, 'Loop Movie')
+    loopax = fig.add_axes([0.6, 0.2, 0.3, 0.07])
+    loopbutton = CheckButtons(loopax, ["Loop movie"])
     
-    startax = fig.add_axes([0.5, 0.025, 0.1, 0.04])
+    startax = fig.add_axes([0.6, 0.4, 0.3, 0.07])
     startbutton = Button(startax, 'Preview video', hovercolor='0.975')
-    dataax = fig.add_axes([0.8, 0.025, 0.1, 0.04])
+    dataax = fig.add_axes([0.6, 0.6, 0.3, 0.07])
     databutton = Button(dataax, 'Save Dataset', hovercolor='0.975')
-    movieax = fig.add_axes([0.2, 0.025, 0.1, 0.04])
+    movieax = fig.add_axes([0.6, 0.8, 0.3, 0.07])
     moviebutton = Button(movieax, 'Save movie', hovercolor='0.975')
+    
+    def checkloop(event):
+        global loop
+        loop = not loop
     
     def Start_Animation(event):
         global quiver_artist
         global quiverM1
         global quiverM2
         global quiverM3
+        global traj_artist
+        global loop
         #plt.figure()
         figA, axA = plt.subplots()
         img_artist = axA.imshow(img_st[0,:,:], cmap='binary', animated=True)
+        
         
         defframe = deftab[deftab['frame']==0]
         
         lim = 0.5
         e_map = 'PiYG'
-        colorm = cm.get_cmap(e_map)
+        colorm = plt.get_cmap(e_map)
         defP = defframe[defframe['charge']==0.5]
         centroidsP = np.array([defP['y'], defP['x']]).transpose()
         axisP = np.array(defP['axis'])
@@ -672,15 +687,20 @@ def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
         quiverM2 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM+2*np.pi/3), np.sin(axisM+2*np.pi/3), angles='xy', color=minuscolor)
         quiverM3 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM-2*np.pi/3), np.sin(axisM-2*np.pi/3), angles='xy', color=minuscolor)
         
-        trajdata_x = [ [] for _ in range(np.max(deftab['particle'])) ]
-        trajdata_y = [ [] for _ in range(np.max(deftab['particle'])) ]
-        traj_artist = [None]*np.max(deftab['particle'])
+        if len(deftab):
+            trajdata_x = [ [] for _ in range(np.max(deftab['particle'])+1) ]
+            trajdata_y = [ [] for _ in range(np.max(deftab['particle'])+1) ]
+            traj_artist = [None]*(np.max(deftab['particle']+1))
+        else:
+            traj_artist = []
         #print(trajdata_x)
         defpart = np.unique(defframe['particle'])
         for i in range(len(defpart)):
-            trajdata_x[defpart[i]].append(float(defframe['x'][defframe['particle']==defpart[i]]))
-            trajdata_y[defpart[i]].append(float(defframe['y'][defframe['particle']==defpart[i]]))
-            traj_artist[defpart[i]], = plt.plot(trajdata_x[defpart[i]], trajdata_y[defpart[i]])
+            trajdata_x[defpart[i]].append(defframe['x'][defframe['particle']==defpart[i]].iloc[0])
+            trajdata_y[defpart[i]].append(defframe['y'][defframe['particle']==defpart[i]].iloc[0])
+        
+        for i in range(len(traj_artist)):
+            traj_artist[i], = axA.plot([], [])
             #print(trajdata_x[defpart[i]])
         
         #art_list = add_points(axA, deftab, 0, animated=True)
@@ -697,6 +717,7 @@ def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
             global quiverM1
             global quiverM2
             global quiverM3
+            global traj_artist
             img_artist.set_array(img_st[frame,:,:])
             
             defframe = deftab[deftab['frame']==frame]
@@ -705,6 +726,12 @@ def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
             quiverM1.remove()
             quiverM2.remove()
             quiverM3.remove()
+            
+            if frame==0:
+                for i in range(len(traj_artist)):
+                    trajdata_x[i] = []
+                    trajdata_y[i] = []
+                    traj_artist[i].set_data([], [])
             
             defP = defframe[defframe['charge']==0.5]
             centroidsP = np.array([defP['y'], defP['x']]).transpose()
@@ -722,12 +749,12 @@ def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
             
             defpart = np.unique(defframe['particle'])
             for i in range(len(defpart)):
-                trajdata_x[defpart[i]].append(float(defframe['x'][defframe['particle']==defpart[i]]))
-                trajdata_y[defpart[i]].append(float(defframe['y'][defframe['particle']==defpart[i]]))
+                trajdata_x[defpart[i]].append(defframe['x'][defframe['particle']==defpart[i]].iloc[0])
+                trajdata_y[defpart[i]].append(defframe['y'][defframe['particle']==defpart[i]].iloc[0])
                 #print(trajdata_x[defpart[i]])
                 if not (traj_artist[defpart[i]] is None):
                     traj_artist[defpart[i]].set_data(trajdata_x[defpart[i]], trajdata_y[defpart[i]])
-            
+        
             # if 'art_list' in globals():
             #     for j in range(len(art_list)):
             #         if art_list[j] is not None:
@@ -743,12 +770,13 @@ def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
             #             art_list[j] = None
             #     else:
             #         art_list.append(art_list_temp[j])
-                    
+            
+            #traj_artist[0].figure.canvas.draw_idle()
             return [img_artist, quiver_artist, quiverM1, quiverM2, quiverM3, *traj_artist]
         
         ## Start the animation
         #ani[0] = ArtistAnimation(figA, arts, interval=5, blit=False, repeat=loopbutton.get_active())
-        ani[0] = FuncAnimation(figA, update, frames=range(len(img_st)), interval=5, blit=False, repeat=False)#loopbutton.get_active())
+        ani[0] = FuncAnimation(figA, update, frames=range(len(img_st)), interval=5, blit=False, repeat=loop)#loopbutton.get_active())
         
         # while plt.fignum_exists(figA.number):
         #     plt.pause(0.1)
@@ -761,6 +789,7 @@ def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
         fold = filedialog.asksaveasfilename(defaultextension='.mp4') # the user choses a place in file explorer
         ani[0].save(fold.name, fps=30, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as csv
     
+    loopbutton.on_clicked(checkloop)
     startbutton.on_clicked(Start_Animation)
     databutton.on_clicked(save_data)
     moviebutton.on_clicked(save_movie)
@@ -769,7 +798,7 @@ def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
     axmem = fig.add_axes([0.1, 0.25, 0.0225, 0.63])
     memslider = Slider(
         ax=axmem,
-        label="Memory",
+        label="Max skipped\n frames",
         valmin=1,
         valmax=round(len(np.unique(deftab['frame']))/4),
         valinit=memory,
@@ -779,10 +808,10 @@ def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
     
     ### searchR slider
     
-    axsearch = fig.add_axes([0.15, 0.25, 0.0225, 0.63])
+    axsearch = fig.add_axes([0.3, 0.25, 0.0225, 0.63])
     searchslider = Slider(
         ax=axsearch,
-        label="search range",
+        label="search\n range",
         valmin=1,
         valmax=round(max(img.shape)/4),
         valinit=searchR,
@@ -790,25 +819,61 @@ def check_tracking(imgpath, deftab, searchR=None, memory=None, filt=None):
         orientation="vertical"
     )    
     
+    axfilt = fig.add_axes([0.5, 0.25, 0.0225, 0.63])
+    filtslider = Slider(
+        ax=axfilt,
+        label="Filter small\n trajectories",
+        valmin=0,
+        valmax=round(0.8*len(img_st)),
+        valinit=filt,
+        valstep=1,
+        orientation="vertical"
+    )    
+    
     def change_tracking(val):
+        global deftab
         tp.quiet()
         
-        ptab = deftab[deftab['charge']==0.5]
-        mtab = deftab[deftab['charge']==-0.5]
-        otab = deftab[np.abs(deftab['charge'])!=0.5]
+        #### Perform 3 tracking, for -1/2, +1/2 and others -> does not work
+        # ptab = deftab[deftab['charge']==0.5]
+        # mtab = deftab[deftab['charge']==-0.5]
+        # otab = deftab[np.abs(deftab['charge'])!=0.5]
         
-        ptab = tp.link(ptab, search_range=searchslider.val, memory=memslider.val)
-        mtab = tp.link(mtab, search_range=searchslider.val, memory=memslider.val)
-        otab = tp.link(otab, search_range=searchslider.val, memory=memslider.val)
+        # if len(ptab)>0:
+        #     ptab = tp.link(ptab, search_range=searchslider.val, memory=memslider.val)
+        # if len(mtab)>0:
+        #     mtab = tp.link(mtab, search_range=searchslider.val, memory=memslider.val)
+        # if len(otab)>0:
+        #     otab = tp.link(otab, search_range=searchslider.val, memory=memslider.val)
         
-        # prevent the particle number to be redundant
-        mtab['particle'] = mtab['particle'] + np.max(ptab['particle']) +1
-        otab['particle'] = otab['particle'] + np.max(mtab['particle']) +1
+        # # prevent the particle number to be redundant
+        # ppart = ptab['particle'].to_numpy()
+        # mpart = mtab['particle'].to_numpy()
+        # opart = otab['particle'].to_numpy()
         
-        deftab['particle'] = [*ptab['particle'], *mtab['particle'], *otab['particle']]
-    
+        #deftab['particle'] = [*ptab['particle'].to_numpy(), *mtab['particle'].to_numpy(), *otab['particle'].to_numpy()]
+
+        
+        # mpart = mpart + ppart.max() + 1
+        # opart = opart + mpart.max() + 1
+        # deftab['particle'] = [*ppart, *mpart, *opart]
+        
+        #### Trak defects irrespective of their charge. We can have mixed trajectories
+        tempdf = tp.link(deftab_raw, search_range=searchslider.val, memory=memslider.val)
+        deftab_raw['particle'] = tempdf['particle']
+        deftab_temp = tp.filter_stubs(deftab_raw, filtslider.val)
+        deftab = deftab_temp
+        # Ndiff = len(deftab_temp) - len(deftab)
+        # if Ndiff>0:    
+        #     deftab.iloc[:,:] = deftab_temp.iloc[:len(deftab), :]
+        #     for j in range(Ndiff):
+        #         deftab.append(deftab_temp[len(deftab)+j])
+        # else:
+        #     deftab.drop(np.arange(len(deftab_temp),len(deftab)))
+        #     deftab.iloc[:,:] = deftab_temp.iloc[:,:]
     searchslider.on_changed(change_tracking)
     memslider.on_changed(change_tracking)
+    filtslider.on_changed(change_tracking)
     
     
     
