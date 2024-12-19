@@ -19,7 +19,7 @@ import matplotlib.patheffects as pe
 from matplotlib.colors import Normalize
 from tkinter import filedialog
 import trackpy as tp
-from matplotlib.animation import ArtistAnimation, FuncAnimation
+from matplotlib.animation import ArtistAnimation, FuncAnimation, FFMpegWriter
 import os
 
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
@@ -170,7 +170,7 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0):
     axR = fig.add_axes([0.1, 0.25, 0.0225, 0.63])
     R_slider = Slider(
         ax=axR,
-        label="Detection radius [px]",
+        label="Detection\n radius [px]",
         valmin=2,
         valmax=round(len(img)/4),
         valinit=R,
@@ -179,10 +179,10 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0):
     )    
     
     # Make a vertically oriented slider to control the radius o fdetection R
-    axThresh = fig.add_axes([0.2, 0.25, 0.0225, 0.63])
+    axThresh = fig.add_axes([0.23, 0.25, 0.0225, 0.63])
     Thresh_slider = Slider(
         ax=axThresh,
-        label="Threshold",
+        label="Order parameter\n detection threshold",
         valmin=0,
         valmax=1,
         valinit=order_threshold,
@@ -302,10 +302,13 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0):
         order_threshold = Thresh_slider.val
         BoxSize = 6
         peak_threshold = 0.75
-        e_vec, err_vec, cost_vec, theta_vec, phi, dchar, field, pos = can.get_anisotropy(img, False, R_slider.val/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, plotit=False, stack=stack, savedir = None, give_field=True)
+
+        e_vec, err_vec, cost_vec, theta_vec, phi, dchar, field, pos = can.get_anisotropy(img, False, R_slider.val/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False, savedir = None, give_field=True)
+        
         defect_char = dchar
         my_field[0] = field
         my_field[1] = pos
+        
         
         R_vis = False
         vis = art_vec[0].get_visible()
@@ -444,6 +447,11 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0):
     def finish(event):
         global defect_char
         global over
+        
+        
+        sigma = round(1.5*w_slider.val) #integration size for orientation field
+        bin_ = round(w_slider.val/bin_factor) # Sampling size for orientation field
+        
         over = True
         # The displayed image is just one frame, now the whole stack is computed.
         print('Computing the whole stack...')
@@ -453,7 +461,8 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0):
         #print(defect_char['x'])
 
         fold = filedialog.asksaveasfile(defaultextension='.csv') # the user choses a place in file explorer
-        defect_char.to_csv(fold.name) # the DataFrame is saved as csv
+        if not fold is None:
+            defect_char.to_csv(fold.name) # the DataFrame is saved as csv
         print('Saved')
 
             
@@ -652,6 +661,7 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
     movieax = fig.add_axes([0.6, 0.8, 0.3, 0.07])
     moviebutton = Button(movieax, 'Save movie', hovercolor='0.975')
     
+    
     def checkloop(event):
         global loop
         loop = not loop
@@ -688,13 +698,13 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
         quiverM3 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM-2*np.pi/3), np.sin(axisM-2*np.pi/3), angles='xy', color=minuscolor)
         
         if len(deftab):
-            trajdata_x = [ [] for _ in range(np.max(deftab['particle'])+1) ]
-            trajdata_y = [ [] for _ in range(np.max(deftab['particle'])+1) ]
-            traj_artist = [None]*(np.max(deftab['particle']+1))
+            trajdata_x = [ [] for _ in range(int(np.max(deftab['particle'])+1)) ]
+            trajdata_y = [ [] for _ in range(int(np.max(deftab['particle'])+1)) ]
+            traj_artist = [None]*int(np.max(deftab['particle']+1))
         else:
             traj_artist = []
         #print(trajdata_x)
-        defpart = np.unique(defframe['particle'])
+        defpart = np.array(np.unique(defframe['particle']), dtype=int)
         for i in range(len(defpart)):
             trajdata_x[defpart[i]].append(defframe['x'][defframe['particle']==defpart[i]].iloc[0])
             trajdata_y[defpart[i]].append(defframe['y'][defframe['particle']==defpart[i]].iloc[0])
@@ -747,7 +757,7 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
             quiverM2 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM+2*np.pi/3), np.sin(axisM+2*np.pi/3), angles='xy', color=minuscolor)
             quiverM3 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM-2*np.pi/3), np.sin(axisM-2*np.pi/3), angles='xy', color=minuscolor)
             
-            defpart = np.unique(defframe['particle'])
+            defpart = np.array(np.unique(defframe['particle']), dtype=int)
             for i in range(len(defpart)):
                 trajdata_x[defpart[i]].append(defframe['x'][defframe['particle']==defpart[i]].iloc[0])
                 trajdata_y[defpart[i]].append(defframe['y'][defframe['particle']==defpart[i]].iloc[0])
@@ -781,16 +791,21 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
         # while plt.fignum_exists(figA.number):
         #     plt.pause(0.1)
     
+    startbutton.on_clicked(Start_Animation)
     def save_data(event):
         fold = filedialog.asksaveasfilename(defaultextension='.csv') # the user choses a place in file explorer
-        deftab.to_csv(fold.name) # the DataFrame is saved as csv
+        #print(fold)
+        deftab.to_csv(fold) # the DataFrame is saved as csv
     
     def save_movie(event):
-        fold = filedialog.asksaveasfilename(defaultextension='.mp4') # the user choses a place in file explorer
-        ani[0].save(fold.name, fps=30, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as csv
+        fold = filedialog.asksaveasfilename(defaultextension='.gif') # the user choses a place in file explorer
+        #writervideo = FFMpegWriter(fps=30)
+        if ani[0] is None:
+            Start_Animation(None)
+            #plt.close()
+        ani[0].save(fold, writer='pillow', fps=30)#, writer=writervideo)#, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as avi
     
     loopbutton.on_clicked(checkloop)
-    startbutton.on_clicked(Start_Animation)
     databutton.on_clicked(save_data)
     moviebutton.on_clicked(save_movie)
     

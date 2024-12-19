@@ -21,7 +21,10 @@ Please be patient with the sliders, computations can take a few seconds
 # Where are you storing the folder?
 function_directory = r'./'
 # path to the image to analyze
-path = r'C:\Users\Quentin\Documents\Experiments\zebra_skin_data\previous\zebra_skin.tif'
+# path = r'C:\Users\Quentin\Documents\Experiments\zebra_skin_data\previous\zebra_skin.tif'
+# path = function_directory+r'20240215_Actin_Only_8_tif.tif'
+path = r'C:\Users\Quentin\Documents\Experiments\Sanchez_kinesin\MT_kinesin_blue_cropped.tif'
+
 # Say wether the image is a stack
 stack = True
 
@@ -35,7 +38,7 @@ feature_in = 32
 # Radius of detection for anisotropy. Around a +1/2 defect, we take the director 
 #   angle as a function of azimuthal angle at a distance Rdet. This is a 
 #   signature of splay-bend anisotropy.
-Rdet_in = 60
+Rdet_in = 30
 frame = 15
 
 
