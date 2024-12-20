@@ -282,13 +282,13 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan, endsav
 
     # draw the legend
     axlegend= fig.add_axes([0.32, 0.87, 0.5, 0.13])
-    imlegend = plt.imread(os.path.split(origin_file)[0]+'/GUI_images/defect_type.png')
+    imlegend = plt.imread(os.path.split(origin_file)[0]+os.sep+'GUI_images'+os.sep+'defect_type.png')
     axlegend.imshow(imlegend)
     axlegend.axis('off')
     
     # draw the schematics of the defects with different anisotropy
     axschem= fig.add_axes([0.9, 0.19, 0.1, 0.7])
-    imschem = plt.imread(os.path.split(origin_file)[0]+'/GUI_images/defect_style.png')
+    imschem = plt.imread(os.path.split(origin_file)[0]+os.sep+'GUI_images'+os.sep+'defect_style.png')
     axschem.imshow(imschem)
     axschem.axis('off')
     
@@ -1071,7 +1071,7 @@ def DefeQt(f_in=15, R_in=10, fname_in=None, frame_in=0):
 
         ax.imshow(img, cmap='binary')
     else:
-        img = plt.imread('../GUI_images/spot_defect.jpg')
+        img = plt.imread('..'+os.sep+'GUI_images'+os.sep+'spot_defect.jpg')
         ax.imshow(img, cmap='binary')
     plt.title('Image displayed for\n parameter choice')
     plt.subplots_adjust(bottom=0.2, left=0.4)  # Leave space for the button
@@ -1169,9 +1169,9 @@ def DefeQt(f_in=15, R_in=10, fname_in=None, frame_in=0):
         #Loop over files
         for filename in os.listdir(folder):
             if filename.endswith('tif') or filename.endswith('png'):
-                e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = can.get_anisotropy(folder+'/'+filename, False, det_param[1]/bin_, sigma, bin_, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
+                e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = can.get_anisotropy(folder+os.sep+filename, False, det_param[1]/bin_, sigma, bin_, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
                 
-                defect_table.to_csv(folder+'/data_'+filename[:-3]+'csv')
+                defect_table.to_csv(folder+os.sep+'data_'+filename[:-3]+'csv')
     
     detbutton.on_clicked(detection)
     trackbutton.on_clicked(check_track)

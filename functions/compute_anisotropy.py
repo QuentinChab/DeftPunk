@@ -169,7 +169,7 @@ def one_defect_anisotropy(field, R=np.nan, xc=None, yc=None, axis = 0, err = 0.0
     else:
         R_vec = [R]
         
-    phi = np.load(origin_file+r'\ref_epsilon\orientationAzimuthal.npy')
+    phi = np.load(origin_file+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
     
     emin = np.nan
     es_min = np.nan
@@ -204,7 +204,7 @@ def one_defect_anisotropy(field, R=np.nan, xc=None, yc=None, axis = 0, err = 0.0
             err_e = (es[ierr2] - es[ierr1])/2
     
     if plotit:
-        th_ref = np.load(origin_file+'/ref_epsilon/orientationTheta_e%.2f.npy'%(emin))
+        th_ref = np.load(origin_file+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
         
         plt.figure()
         
@@ -329,7 +329,7 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, B
             charge_stack = []
             frames = []
             for i in range(len(img)):
-                print('Computing frame %.0f/%.0f'%(i+1, len(img)))
+                print('Computing frame %.0f'%(i+1)+os.sep+'%.0f'%(len(img)))
                 e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = get_anisotropy(img[i], average, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit, stack=True)
                 e_stack.append(e_vec)
                 err_stack.append(err_vec)
@@ -353,7 +353,7 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, B
                 dist_mat = cdist(centr, centr)
                 
                 if plotit:
-                    plt.savefig(savedir+'/img%.0f.png'%(i), dpi=600)
+                    plt.savefig(savedir+os.sep+'img%.0f.png'%(i), dpi=600)
                     
                     #ax = plt.gca()
                     #fig = plt.gcf()
@@ -459,7 +459,7 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, B
     img_centroids[:,1] = centroidsN[:,1]*bin_+y1
     
 
-    phi = np.load(origin_file+r'\ref_epsilon\orientationAzimuthal.npy')
+    phi = np.load(origin_file+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
                 
     fields = []
     e_vec = []#np.empty((np.sum(np.abs(chargeb-0.5)<0.1),1))*np.nan
@@ -648,8 +648,8 @@ def anisotropy_on_directory(dirname, sigma, bin_, fov, BoxSize, order_threshold,
     e_field_av = []
     
     for fname in os.listdir(dirname):
-        e_, err_vec, cost_vec, theta_, phi = get_anisotropy(dirname+'/'+fname, False, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
-        e_field, err_vec, cost_vec, theta_field, phi = get_anisotropy(dirname+'/'+fname, True, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
+        e_, err_vec, cost_vec, theta_, phi = get_anisotropy(dirname+os.sep+fname, False, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
+        e_field, err_vec, cost_vec, theta_field, phi = get_anisotropy(dirname+os.sep+fname, True, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
         e_vec = [*e_vec, *e_]
         th_vec = [*th_vec, *theta_]
         e_field_av.append(e_field)
@@ -731,12 +731,12 @@ def reference_profile(e):
 
     """
     if np.isnan(e):
-        phi = np.load(r'.\ref_epsilon\orientationAzimuthal.npy')
+        phi = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
         ref_th = np.ones(phi.shape)*np.nan
     else:
         if np.abs(e)<0.01:
             e = 0.
-        ref_th = np.load(r'.\ref_epsilon\orientationTheta_e%.2f.npy'%(e))
+        ref_th = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e))
     
     return ref_th
 
@@ -868,14 +868,14 @@ def plot_profiles(theta, e_vec, err_vec, individual = False):
 
     """
     
-    phi = np.load(r'.\ref_epsilon\orientationAzimuthal.npy')
+    phi = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
     
     if individual:
         fs = []
         for i in range(len(e_vec)):
-            refth = np.load(r'.\ref_epsilon\orientationTheta_e%.2f.npy'%(e_vec[i]))
-            thpstd = np.load(r'.\ref_epsilon\orientationTheta_e%.2f.npy'%(min(1,e_vec[i]+err_vec[i])))
-            thmstd = np.load(r'.\ref_epsilon\orientationTheta_e%.2f.npy'%(max(-1,e_vec[i]-err_vec[i])))
+            refth = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e_vec[i]))
+            thpstd = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(min(1,e_vec[i]+err_vec[i])))
+            thmstd = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(max(-1,e_vec[i]-err_vec[i])))
             
             f = plt.figure()
             plt.plot(phi, theta[i], 'o')
@@ -895,9 +895,9 @@ def plot_profiles(theta, e_vec, err_vec, individual = False):
         em = np.mean(e_vec)
         f2 = plt.figure()
         
-        ref_av = np.load(r'.\ref_epsilon\orientationTheta_e%.2f.npy'%(em))
-        std_ref_up = np.load(r'.\ref_epsilon\orientationTheta_e%.2f.npy'%(min(1,em+maxdev/3)))
-        std_ref_down = np.load(r'.\ref_epsilon\orientationTheta_e%.2f.npy'%(max(-1,em-maxdev/3)))
+        ref_av = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(em))
+        std_ref_up = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(min(1,em+maxdev/3)))
+        std_ref_down = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(max(-1,em-maxdev/3)))
         
         for i in range(len(e_vec)):
             plt.plot(phi, theta[i], '.', color=colorm(np.abs(e_vec[i]-em)/maxdev))
@@ -948,7 +948,7 @@ def trackmap(frame, traj, savedir=np.nan, filt=np.nan, yes_traj=True):
                 plt.plot(trajframe['x'][particleframe==ntraj[j]], trajframe['y'][particleframe==ntraj[j]])
         
         if isinstance(savedir, str):
-            plt.savefig(savedir+'/frame%.0f.tif'%(i), dpi=150)
+            plt.savefig(savedir+os.sep+'frame%.0f.tif'%(i), dpi=150)
         plt.close()
         
         
@@ -1048,7 +1048,7 @@ def plot_hist_movie(tab, targetdir):
         sigopt[i] = np.nanstd(e_frame)#popt[2]
         plt.close()
         
-    tf.imwrite(targetdir+'/hist.tif', hist)
+    tf.imwrite(targetdir+os.sep+'hist.tif', hist)
     
     plt.figure()
     plt.errorbar(framlist*0.25, eopt, sigopt, fmt='o', label='Data')

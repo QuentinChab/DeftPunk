@@ -35,7 +35,7 @@ def rotation(x,y,vx,vy,angle):
 
 def compute_angle_diagram(orientation, R, center=None, axis=0, sym= False, plotthis = False):
     #Load the reference phi
-    phi = np.load(origin_file+r'\ref_epsilon\orientationAzimuthal.npy')
+    phi = np.load(origin_file+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
     th_test = np.copy(orientation)
     #Create the x,y data if not provided
     s = orientation.shape
@@ -122,19 +122,19 @@ def compute_angle_diagram(orientation, R, center=None, axis=0, sym= False, plott
     
     return phi, theta_unit
 
-def anisotropy_comparison(phi, theta, R=np.nan, path = r'.\ref_epsilon_shift\\'):#r'.\ref_epsilon\\'
+def anisotropy_comparison(phi, theta, R=np.nan, path = '.'+os.sep+'ref_epsilon_shift'+os.sep):#r'.\ref_epsilon\\'
     if np.all(np.isnan(theta)):
         return [np.nan], [np.nan]
     if np.isnan(R):
-        path = origin_file+r'\ref_epsilon\\'
+        path = origin_file+os.sep+'ref_epsilon'+os.sep
         es = np.load(path + 'e_vec.npy')
         phi_ref = np.load(path + 'orientationAzimuthal.npy')
         costs = np.ones(es.shape)
     else:
-        path = origin_file+r'\ref_epsilon_shift\\'
+        path = origin_file+os.sep+'ref_epsilon'+os.sep
         es = np.load(path + 'e.npy')
         phi_ref = np.load(path + 'phi.npy')
-        xshift= np.load(path + '/xshift.npy')
+        xshift= np.load(path + os.sep + 'xshift.npy')
         costs = np.ones((len(es), len(xshift)))
     
     
@@ -159,7 +159,7 @@ def anisotropy_comparison(phi, theta, R=np.nan, path = r'.\ref_epsilon_shift\\')
     else:
         for i in range(len(es)):
             for j in range(len(xshift)):
-                th_ref = np.load(path+'R%.0f/Theta_e%.2f_xshift%.2f.npy'%(R, es[i], xshift[j]))
+                th_ref = np.load(path+'R%.0f'%(R)+os.sep+'Theta_e%.2f_xshift%.2f.npy'%(es[i], xshift[j]))
                 if not same:
                     th_interp = scipy.interpolate.interp1d(phi_ref, th_ref)
                     th_ref = th_interp(phi)
@@ -185,8 +185,8 @@ def orientation(phi, e, scratch=False, p=np.nan):
         thopt = scipy.optimize.minimize_scalar(th_func)
         return thopt.x, p
     else:
-        phiref = np.load('./ref_epsilon/orientationAzimuthal.npy')
-        thref = np.load('./ref_epsilon/orientationTheta_e%.2f.npy'%(e))
+        phiref = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+        thref = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e))
         thinterp = interp1d(phiref, thref, fill_value='extrapolate')
         return thinterp(phi)
 

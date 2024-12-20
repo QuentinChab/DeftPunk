@@ -17,12 +17,14 @@ Please be patient with the sliders, computations can take a few seconds
 #################################### 
 %matplotlib qt
 
+import os
+
 ######## Fill this section #########
 # Where are you storing the folder?
-function_directory = r'./'
+function_directory = '.'+os.sep
 # path to the image to analyze
 # path = r'C:\Users\Quentin\Documents\Experiments\zebra_skin_data\previous\zebra_skin.tif'
-# path = function_directory+r'20240215_Actin_Only_8_tif.tif'
+# path = function_directory+'20240215_Actin_Only_8_tif.tif'
 path = r'C:\Users\Quentin\Documents\Experiments\Sanchez_kinesin\MT_kinesin_blue_cropped.tif'
 
 # Say wether the image is a stack
@@ -46,7 +48,7 @@ frame = 15
 ######## Import necessary packages ########
 import numpy as np
 import sys
-sys.path.append(function_directory+'functions/')
+sys.path.append(function_directory+'functions'+os.sep)
 from chained_defects import defect_analyzer # import our function
 
 
