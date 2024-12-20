@@ -27,7 +27,7 @@ origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 bin_factor = 4
 
-def defect_analyzer(imgpath, w, R, stack=True, frame=0):
+def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan):
     """Calls the interface to analyze defect and their anisotropy on an image
        
     The exact choice of detection parameter is described at the end.
@@ -155,11 +155,15 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0):
     lim = 0.5 # limits of anisotropy colorbar
     
     ##### Sliders ############
+    if np.isnan(um_per_px):
+        labw = 'Feature size [px]'
+    else:
+        labw = 'Feature size [px] (1px=%.2fum)'%(um_per_px)
     # Make a horizontal slider to control the feature size w.
     axw = fig.add_axes([0.25, 0.1, 0.65, 0.03])
     w_slider = Slider(
         ax=axw,
-        label='Feature size [px]',
+        label= labw,
         valmin=4,
         valmax=80,
         valinit=w,
@@ -542,13 +546,17 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0):
 ####################################
 
 def defect_statistics(df, minframe=0, maxframe=np.inf, filt=0, minspace=0):
+    # This represents some usual analysis of the data
+    
     
     # apply the requested filters on the dataframe
     if 'frame' in df.columns:
         df = df[np.logical_and(df['frame']>=minframe, df['frame']<=maxframe)] #filter at reduced frame range
     df = tp.filter_stubs(df, filt) #only trajectories longer than filt
     
-    plt.figure()
+    flist = []
+    
+    f1 = plt.figure()
     plt.plot(df['MinDist'], df['Anisotropy'], '.', label='Data')
     plt.plot([minspace, minspace], [-1,1], 'k--', label='Filtered defects')
     plt.xlabel('Distance to nearest neighboring defect')
@@ -557,32 +565,37 @@ def defect_statistics(df, minframe=0, maxframe=np.inf, filt=0, minspace=0):
     plt.title('Before filtering non-isolated defects')
     plt.legend()
     plt.tight_layout()
+    flist.append(f1)
     
     df = df[df['MinDist']>=minspace] #only if the closest neighbor is further away than minspace
     
     # Make the stat
     emean = np.nanmean(df['Anisotropy'])
     estd  = np.nanstd(df['Anisotropy'])
-    plt.figure()
+    f2 = plt.figure()
     plt.hist(df['Anisotropy'], bins=20)
     plt.xlabel('Anisotropy')
     plt.ylabel('Occurence')
     plt.xlim([-1,1])
     plt.title('Average %.0f defects: $<e>=%.2f\\pm %.2f$'%(len(df), emean, estd))
     plt.tight_layout()
+    flist.append(f2)
     
     if 'frame' in df.columns:
         trajs = np.unique(df['particle'])
         etraj = np.empty(len(trajs))*np.nan
+        Ltraj = np.empty(len(trajs))*np.nan
         for i in range(len(trajs)):
             etraj[i] = np.mean(df['Anisotropy'][df['particle']==trajs[i]])
-        plt.figure()
+            Ltraj[i] = np.sum(df['particle']==trajs[i])
+        f3 = plt.figure()
         plt.hist(etraj, bins=20)
         plt.xlabel('Avergae anisotropy on a trajectory')
         plt.ylabel('Occurence')
         plt.xlim([-1,1])
         plt.title('Average over %.0f traj: $<e>=%.2f\\pm %.2f$'%(len(trajs), np.nanmean(etraj), np.nanstd(etraj)))
         plt.tight_layout()
+        flist.append(f3)
         
         
         frs = np.unique(df['frame'])
@@ -591,16 +604,53 @@ def defect_statistics(df, minframe=0, maxframe=np.inf, filt=0, minspace=0):
         for i in range(len(frs)):
             efr[i] = np.mean(df['Anisotropy'][df['frame']==frs[i]])
             efrstd[i] = np.std(df['Anisotropy'][df['frame']==frs[i]])
-        plt.figure()
+        f4 = plt.figure()
         plt.errorbar(frs, efr, efrstd, fmt='.')
         plt.ylabel('Avergae anisotropy on a frame')
         plt.xlabel('Frame')
         plt.ylim([-1,1])
         plt.tight_layout()
+        flist.append(f4)
         
         
+        # Plot the longest trajectories
+        f5 = plt.figure()
+        plt.xlabel('frame')
+        plt.ylabel('Anisotropy')
+        A = np.argsort(Ltraj)
+        Nplot = 5 #number of plotted trajs        
+        plt.title('Anisotropy of the %.0f longest trajectories'%(Nplot))
+        inds = np.empty(Nplot, dtype=int)
+        ind = 0
+        while Nplot>0 and ind<len(trajs):
+            #ind_th longest trajectory
+            trajdat = df[df['particle']==trajs[A[-1-ind]]]
+            if np.sum(trajdat['charge']==0.5)>=len(trajdat)/2: # if most of the defects are +1/2
+                plt.plot(trajdat['frame'], trajdat['Anisotropy'], '-')
+                Nplot -= 1
+                inds[Nplot-1] = ind
+            ind += 1
+        plt.ylim([-1,1])
+        plt.tight_layout()
+        flist.append(f5)
         
+        box_pts = 8
+        box = np.ones(box_pts)/box_pts
+        for j in range(len(inds)):
+            trajdat = df[df['particle']==trajs[A[-1-inds[j]]]]
+            f, ax1 = plt.subplots()
+            ax2 = ax1.twinx()
+            ax1.plot(trajdat['frame'], np.convolve(trajdat['Anisotropy'], box, mode='same'), 'g-')
+            ax2.plot(trajdat['frame'], np.convolve(trajdat['MinDist'], box, mode='same'), 'b-')
+            ax1.set_xlabel('frame')
+            ax1.set_ylabel('Anisotropy', color='g')
+            ax2.set_ylabel('Distance to nearest neighbor', color='b')
+            plt.title('Longest trajectory #%.0f (window av size %.0f)'%(j+1, box_pts))
+            plt.tight_layout()
+            
+            flist.append(f)
         
+    return flist
         
         
 
@@ -894,7 +944,8 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
     
     while plt.fignum_exists(fig.number):
          plt.pause(0.1)
-        
+    
+    return deftab, memslider.val, searchslider.val, filtslider.val
         
     
 def add_points(ax, all_data, frame, plot_cbar=False, animated=False):
@@ -986,4 +1037,132 @@ def add_points(ax, all_data, frame, plot_cbar=False, animated=False):
     return artists_vec
 
 
+def DefeQt(f_in=15, R_in=10, fname_in=None, frame_in=0):
+    global filename
+    global defect_char
+    global stack
+    global img
+    defect_char = pd.DataFrame()
+    det_param = [f_in, R_in, 0.8]
+    track_param = [None, None, 0]
+    stack = False
+    
+    filename = fname_in
+    
+    fig, ax = plt.subplots()
+    if not filename is None:
+        img = tf.imread(filename)
+        if filename[-3:]=='tif':
+            with tf.TiffFile(filename) as tif:
+                axes = tif.series[0].axes
+                
+                if "Z" in axes:
+                    stack=True
+                    if "C" in axes:
+                        img = np.mean(img, axis=3)
+                elif "C" in axes:
+                    img = np.mean(img, axis=2)
+        else:
+            img = plt.imread(filename)
+            if len(img.shape)>2:
+                stack = True
 
+        ax.imshow(img, cmap='binary')
+    else:
+        img = [[], []]
+        # ax.imshow(img, cmap='binary')
+    plt.title('Image displayed for\n parameter choice')
+    plt.subplots_adjust(bottom=0.2, left=0.4)  # Leave space for the button
+    # buttons: load image // launch detection // check tracking // save // apply on other image
+    # Display: frame_th image of laoded dataset
+    
+    detax = fig.add_axes([0.05, 0.65, 0.25, 0.07])
+    detbutton = Button(detax, 'Start Detection', hovercolor='0.975')
+    trackax = fig.add_axes([0.05, 0.5, 0.25, 0.07])
+    trackbutton = Button(trackax, 'Check tracking', hovercolor='0.975')
+    saveax = fig.add_axes([0.05, 0.35, 0.25, 0.07])
+    savebutton = Button(saveax, 'Save Data', hovercolor='0.975')
+    loadax = fig.add_axes([0.05, 0.8, 0.25, 0.07])
+    loadbutton = Button(loadax, 'Load image', hovercolor='0.975')
+     
+    axframe = fig.add_axes([0.25, 0.1, 0.65, 0.03])
+    frame_slider = Slider(
+        ax=axframe,
+        label= 'Visualized\n frame',
+        valmin=0,
+        valmax=len(img),
+        valinit=frame_in,
+        valstep=1
+    )
+    
+    def update_valmax(new_valmax):
+        frame_slider.valmax = new_valmax  # Update the valmax attribute
+        frame_slider._stop = new_valmax  # Update the internal _stop value
+        frame_slider.ax.set_xlim(frame_slider.valmin, frame_slider.valmax)  # Update the slider's range
+        frame_slider.val = min(frame_slider.val, new_valmax)  # Ensure the current value is within range
+        frame_slider.set_val(frame_slider.val)  # Update the slider's value
+        frame_slider.ax.figure.canvas.draw_idle()  # Redraw the slider
+    
+    def load_movie(event):
+        global filename
+        global stack
+        global img
+        filename = filedialog.askopenfilename()
+        
+        img = tf.imread(filename)
+        if filename[-3:]=='tif':
+            with tf.TiffFile(filename) as tif:
+                axes = tif.series[0].axes
+                
+                if "Z" in axes:
+                    stack=True
+                    if "C" in axes:
+                        img = np.mean(img, axis=3)
+                elif "C" in axes:
+                    img = np.mean(img, axis=2)
+        else:
+            img = plt.imread(filename)
+            if len(img.shape)>2:
+                stack = True
+        if stack:
+            ax.imshow(img[frame_slider.val,:,:], cmap='binary')
+            update_valmax(len(img))
+        else:
+            ax.imshow(img, cmap='binary')
+        fig.canvas.draw_idle()
+
+    def detection(event):
+        global defect_char
+        if filename is None:
+            print('Laod an image first!')
+        else:
+            defect_char, det_param[0], det_param[1], det_param[2] = defect_analyzer(filename, det_param[0], det_param[1], stack=True, frame=frame_slider.val, um_per_px=np.nan)
+    
+    def check_track(event):
+        global defect_char
+        if len(defect_char)>0:
+            defect_char, track_param[0], track_param[1], track_param[2] = check_tracking(filename, defect_char, searchR=track_param[1], memory=track_param[0], filt=track_param[2])
+        else:
+            print('You should perform detection first.')    
+    
+    def savedat(event):
+        fold = filedialog.asksaveasfilename(defaultextension='.csv')
+        defect_char.to_csv(fold)
+       
+    
+    def update_img(event):
+        if stack:
+            if not filename is None:
+                ax.imshow(img[frame_slider.val,:,:], cmap='binary')
+                fig.canvas.draw_idle()
+    
+    
+    detbutton.on_clicked(detection)
+    trackbutton.on_clicked(check_track)
+    savebutton.on_clicked(savedat)
+    loadbutton.on_clicked(load_movie)
+    frame_slider.on_changed(update_img)
+    
+    plt.show()
+    while plt.fignum_exists(fig.number):
+        plt.pause(0.1)

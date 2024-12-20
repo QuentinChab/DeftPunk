@@ -840,7 +840,7 @@ def plot_defect_map(centroids, chargedef, axisdef, img = [], xfield= [], yfield 
             #plt.plot(centroids[i,1], centroids[i,0], 'o', color = cother)
     
     if plot_cbar:
-        plt.colorbar(cm.ScalarMappable(norm=Normalize(-lim, lim), cmap=e_map), label='Anisotropy []')
+        plt.colorbar(cm.ScalarMappable(norm=Normalize(-lim, lim), cmap=e_map), label='Anisotropy []', ax=ax)
         
     return f
 
