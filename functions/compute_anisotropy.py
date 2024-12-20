@@ -41,27 +41,27 @@ import datetime
 import pandas as pd
 import trackpy as tp
 import matplotlib.patheffects as pe
-import torch
-import torch.nn as nn
+# import torch
+# import torch.nn as nn
 
 plt.rcParams.update({'font.size': 16})
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
-class SimpleNN(nn.Module):
-    def __init__(self, input_size):
-        super(SimpleNN, self).__init__()
-        self.fc = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(input_size, 128),
-            nn.ReLU(),
-            nn.Linear(128, 64),
-            nn.ReLU(),
-            nn.Linear(64, 1),
-            nn.Tanh()
-        )
+# class SimpleNN(nn.Module):
+#     def __init__(self, input_size):
+#         super(SimpleNN, self).__init__()
+#         self.fc = nn.Sequential(
+#             nn.Flatten(),
+#             nn.Linear(input_size, 128),
+#             nn.ReLU(),
+#             nn.Linear(128, 64),
+#             nn.ReLU(),
+#             nn.Linear(64, 1),
+#             nn.Tanh()
+#         )
     
-    def forward(self, x):
-        return self.fc(x)
+#     def forward(self, x):
+#         return self.fc(x)
 
 def one_defect_anisotropy(field, R=np.nan, xc=None, yc=None, axis = 0, err = 0.05, plotit=False, sym=False, ML=False):
     """
@@ -110,58 +110,58 @@ def one_defect_anisotropy(field, R=np.nan, xc=None, yc=None, axis = 0, err = 0.0
 
     """
     # Use Machinelearning to compute the anisotropy
-    if ML:
-        model = SimpleNN(input_size=31*31)
-        model.load_state_dict(torch.load(r'C:\Users\Quentin\Documents\Analysis\artificial_defect_stack\models\modeul_disct.pt', weights_only=True))
-        #model = torch.load(r'C:\Users\Quentin\Documents\Analysis\artificial_defect_stack\models\22nd_10kepoch_lrem6.pt')
+    # if ML:
+    #     model = SimpleNN(input_size=31*31)
+    #     model.load_state_dict(torch.load(r'C:\Users\Quentin\Documents\Analysis\artificial_defect_stack\models\modeul_disct.pt', weights_only=True))
+    #     #model = torch.load(r'C:\Users\Quentin\Documents\Analysis\artificial_defect_stack\models\22nd_10kepoch_lrem6.pt')
         
-        #format = 1x31x31 scalar field in pytorch data type
-        #format_field = np.empty((1,31,31))
-        s = field.shape
-        if xc is None:
-            xc=round((s[0]-1)/2)
-        if yc is None:
-            yc=round((s[1]-1)/2)
-        xstart = max(0,round(xc-15))
-        xend = min(round(xc+16), s[0])
-        ystart = max(0,round(yc-15))
-        yend = min(round(yc+15+1), s[1])
-        
-        
-        # rounding errors can lead to not-the-right-size array
-        if yend-ystart>31:
-            yend = ystart+31
-        if xend-xstart>31:
-            xend = xstart+31
+    #     #format = 1x31x31 scalar field in pytorch data type
+    #     #format_field = np.empty((1,31,31))
+    #     s = field.shape
+    #     if xc is None:
+    #         xc=round((s[0]-1)/2)
+    #     if yc is None:
+    #         yc=round((s[1]-1)/2)
+    #     xstart = max(0,round(xc-15))
+    #     xend = min(round(xc+16), s[0])
+    #     ystart = max(0,round(yc-15))
+    #     yend = min(round(yc+15+1), s[1])
         
         
-        extracted = field[ystart:yend, xstart:xend]
+    #     # rounding errors can lead to not-the-right-size array
+    #     if yend-ystart>31:
+    #         yend = ystart+31
+    #     if xend-xstart>31:
+    #         xend = xstart+31
         
-        pad_x1 = max(0, round(15-xc)) #top
-        pad_x2 = max(0, round(xc+16-s[0])) #bottom
-        pad_y1 = max(0, round(15-yc)) #left
-        pad_y2 = max(0, round(yc+16-s[1])) #right
         
-        # rounding errors can lead to not-the-right-size array
-        if yend-ystart+pad_y1+pad_y2!=31:
-            pad_y1 = floor(np.abs((31-yend+ystart)/2))
-            pad_y2 = ceil(np.abs((31-yend+ystart)/2))
+    #     extracted = field[ystart:yend, xstart:xend]
         
-        if xend-xstart+pad_x1+pad_x2!=31:
-            pad_x1 = floor(np.abs((31-xend+xstart)/2))
-            pad_x2 = ceil(np.abs((31-xend+xstart)/2))
+    #     pad_x1 = max(0, round(15-xc)) #top
+    #     pad_x2 = max(0, round(xc+16-s[0])) #bottom
+    #     pad_y1 = max(0, round(15-yc)) #left
+    #     pad_y2 = max(0, round(yc+16-s[1])) #right
         
-        format_field = np.pad(extracted, ((pad_y1, pad_y2), (pad_x1, pad_x2)), mode='edge')
+    #     # rounding errors can lead to not-the-right-size array
+    #     if yend-ystart+pad_y1+pad_y2!=31:
+    #         pad_y1 = floor(np.abs((31-yend+ystart)/2))
+    #         pad_y2 = ceil(np.abs((31-yend+ystart)/2))
         
-        # print(field.shape)
-        # print(extracted.shape)
-        # print(format_field.shape)
+    #     if xend-xstart+pad_x1+pad_x2!=31:
+    #         pad_x1 = floor(np.abs((31-xend+xstart)/2))
+    #         pad_x2 = ceil(np.abs((31-xend+xstart)/2))
         
-        format_field = format_field.reshape((1,31,31))
-        format_field = np.array(format_field, dtype=np.float32)
-        e = model(torch.from_numpy(format_field))
+    #     format_field = np.pad(extracted, ((pad_y1, pad_y2), (pad_x1, pad_x2)), mode='edge')
         
-        return e.detach().numpy(), np.nan, np.nan, np.nan
+    #     # print(field.shape)
+    #     # print(extracted.shape)
+    #     # print(format_field.shape)
+        
+    #     format_field = format_field.reshape((1,31,31))
+    #     format_field = np.array(format_field, dtype=np.float32)
+    #     e = model(torch.from_numpy(format_field))
+        
+    #     return e.detach().numpy(), np.nan, np.nan, np.nan
     
     if np.isnan(R): #if R is not provided, scan on the maximum range of Rs
         sor = field.shape

@@ -27,7 +27,7 @@ origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 bin_factor = 4
 
-def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan):
+def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan, endsave=True):
     """Calls the interface to analyze defect and their anisotropy on an image
        
     The exact choice of detection parameter is described at the end.
@@ -216,7 +216,6 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan):
             Objects newly drawn on the ax. It does not include R-contour
         R_vec : list of Objects
             List of new R-contours.
-
         """
         # get xlim and ylim because changing axis will change display range
         current_xlim = ax.get_xlim()
@@ -452,6 +451,9 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan):
         global defect_char
         global over
         
+        if endsave:
+            print('Where to save the data?')
+            fold = filedialog.asksaveasfile(defaultextension='.csv') # the user choses a place in file explorer
         
         sigma = round(1.5*w_slider.val) #integration size for orientation field
         bin_ = round(w_slider.val/bin_factor) # Sampling size for orientation field
@@ -461,13 +463,13 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan):
         print('Computing the whole stack...')
         e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = can.get_anisotropy(imgpath, False, R_slider.val/bin_, round(1.5*w_slider.val), round(w_slider.val/bin_factor), fsig, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
         plt.close(fig)
-        print('Done. You can save the data:')
         #print(defect_char['x'])
 
-        fold = filedialog.asksaveasfile(defaultextension='.csv') # the user choses a place in file explorer
         if not fold is None:
             defect_char.to_csv(fold.name) # the DataFrame is saved as csv
-        print('Saved')
+            print('Saved')
+        else:
+            print('Done')
 
             
     OKbutton.on_clicked(finish)
@@ -1069,8 +1071,8 @@ def DefeQt(f_in=15, R_in=10, fname_in=None, frame_in=0):
 
         ax.imshow(img, cmap='binary')
     else:
-        img = [[], []]
-        # ax.imshow(img, cmap='binary')
+        img = plt.imread('../GUI_images/spot_defect.jpg')
+        ax.imshow(img, cmap='binary')
     plt.title('Image displayed for\n parameter choice')
     plt.subplots_adjust(bottom=0.2, left=0.4)  # Leave space for the button
     # buttons: load image // launch detection // check tracking // save // apply on other image
@@ -1084,6 +1086,8 @@ def DefeQt(f_in=15, R_in=10, fname_in=None, frame_in=0):
     savebutton = Button(saveax, 'Save Data', hovercolor='0.975')
     loadax = fig.add_axes([0.05, 0.8, 0.25, 0.07])
     loadbutton = Button(loadax, 'Load image', hovercolor='0.975')
+    dirax = fig.add_axes([0.05, 0.2, 0.25, 0.07])
+    dirbutton = Button(dirax, 'Apply on\n directory', hovercolor='0.975')
      
     axframe = fig.add_axes([0.25, 0.1, 0.65, 0.03])
     frame_slider = Slider(
@@ -1136,7 +1140,7 @@ def DefeQt(f_in=15, R_in=10, fname_in=None, frame_in=0):
         if filename is None:
             print('Laod an image first!')
         else:
-            defect_char, det_param[0], det_param[1], det_param[2] = defect_analyzer(filename, det_param[0], det_param[1], stack=True, frame=frame_slider.val, um_per_px=np.nan)
+            defect_char, det_param[0], det_param[1], det_param[2] = defect_analyzer(filename, det_param[0], det_param[1], stack=stack, frame=frame_slider.val, um_per_px=np.nan, endsave=False)
     
     def check_track(event):
         global defect_char
@@ -1157,10 +1161,23 @@ def DefeQt(f_in=15, R_in=10, fname_in=None, frame_in=0):
                 fig.canvas.draw_idle()
     
     
+    def on_directory(event):
+        print('Apply the analysis with chosen parameters on a directory. Chose it!')
+        folder = filedialog.askdirectory()
+        bin_ = round(det_param[0]/4)
+        sigma = round(1.5*det_param[0])
+        #Loop over files
+        for filename in os.listdir(folder):
+            if filename.endswith('tif') or filename.endswith('png'):
+                e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = can.get_anisotropy(folder+'/'+filename, False, det_param[1]/bin_, sigma, bin_, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
+                
+                defect_table.to_csv(folder+'/data_'+filename[:-3]+'csv')
+    
     detbutton.on_clicked(detection)
     trackbutton.on_clicked(check_track)
     savebutton.on_clicked(savedat)
     loadbutton.on_clicked(load_movie)
+    dirbutton.on_clicked(on_directory)
     frame_slider.on_changed(update_img)
     
     plt.show()
