@@ -150,7 +150,7 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan, endsav
     qline = ax.quiver(pos[0], pos[1], np.cos(vfield), np.sin(vfield), angles='xy', pivot='mid', headlength=0, headaxislength=0, scale_units='xy', scale=1/bin_ , color=fieldcolor)
     qline.set_visible(False)
     e_map = 'PiYG'
-    colorm = cm.get_cmap(e_map)
+    colorm = plt.get_cmap(e_map)
     
     lim = 0.5 # limits of anisotropy colorbar
     
@@ -464,12 +464,13 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan, endsav
         e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = can.get_anisotropy(imgpath, False, R_slider.val/bin_, round(1.5*w_slider.val), round(w_slider.val/bin_factor), fsig, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
         plt.close(fig)
         #print(defect_char['x'])
-
-        if not fold is None:
-            defect_char.to_csv(fold.name) # the DataFrame is saved as csv
-            print('Saved')
-        else:
-            print('Done')
+        
+        if endsave:
+            if not fold is None:
+                defect_char.to_csv(fold.name) # the DataFrame is saved as csv
+                print('Saved')
+            else:
+                print('Done')
 
             
     OKbutton.on_clicked(finish)
@@ -992,7 +993,7 @@ def add_points(ax, all_data, frame, plot_cbar=False, animated=False):
     # because the number of objects in artists_def is higher than number of defects
     lim = 0.5
     e_map = 'PiYG'
-    colorm = cm.get_cmap(e_map)
+    colorm = plt.get_cmap(e_map)
     incr = 0
     for i in range(len(chargedef)):
         if np.abs(chargedef[i]-1/2)<0.1:
@@ -1038,8 +1039,36 @@ def add_points(ax, all_data, frame, plot_cbar=False, animated=False):
     
     return artists_vec
 
+def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
+    """
+    Interface that allows to load an image and call the different other
+    interfaces that performs detection etc.
+    
+    You can simply call:
+    detect_defect_GUI()
+    
+    Parameters
+    ----------
+    f_in : numeral, optional
+        Initial feature size to perform defect analysis. The default is 15.
+    R_in : numeral, optional
+        Initial detection radius to perform defect analysis. The default is 10.
+    fname_in : string, optional
+        Path to image to analyze. The default is None. Then the user can chose it.
+    frame_in : int, optional
+        Initial frame to analyze. The default is 0. Can be modified.
 
-def DefeQt(f_in=15, R_in=10, fname_in=None, frame_in=0):
+    Sliders
+    -------
+    frame_slider : 
+        Choseframe that will serve to visualize the effect of the 
+        parameters on the detection.
+    
+    Buttons
+    -------
+        load
+
+    """
     global filename
     global defect_char
     global stack
@@ -1183,3 +1212,7 @@ def DefeQt(f_in=15, R_in=10, fname_in=None, frame_in=0):
     plt.show()
     while plt.fignum_exists(fig.number):
         plt.pause(0.1)
+
+%matplotlib qt
+if __name__ == "__main__":
+    detect_defect_GUI()
