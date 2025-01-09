@@ -707,12 +707,14 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
     loopax = fig.add_axes([0.6, 0.2, 0.3, 0.07])
     loopbutton = CheckButtons(loopax, ["Loop movie"])
     
-    startax = fig.add_axes([0.6, 0.4, 0.3, 0.07])
+    startax = fig.add_axes([0.6, 0.375, 0.3, 0.07])
     startbutton = Button(startax, 'Preview video', hovercolor='0.975')
-    dataax = fig.add_axes([0.6, 0.6, 0.3, 0.07])
+    dataax = fig.add_axes([0.6, 0.55, 0.3, 0.07])
     databutton = Button(dataax, 'Save Dataset', hovercolor='0.975')
-    movieax = fig.add_axes([0.6, 0.8, 0.3, 0.07])
+    movieax = fig.add_axes([0.6, 0.725, 0.3, 0.07])
     moviebutton = Button(movieax, 'Save movie', hovercolor='0.975')
+    okax = fig.add_axes([0.6, 0.9, 0.3, 0.07])
+    okbutton = Button(okax, 'OK', hovercolor='0.975')
     
     
     def checkloop(event):
@@ -858,9 +860,14 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
             #plt.close()
         ani[0].save(fold, writer='pillow', fps=30)#, writer=writervideo)#, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as avi
     
+    def finish(event):
+        plt.close(fig)
+        return deftab
+    
     loopbutton.on_clicked(checkloop)
     databutton.on_clicked(save_data)
     moviebutton.on_clicked(save_movie)
+    okbutton.on_clicked(finish)
     
     ### Memory slider
     axmem = fig.add_axes([0.1, 0.25, 0.0225, 0.63])
