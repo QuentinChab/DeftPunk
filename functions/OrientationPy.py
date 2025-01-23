@@ -99,7 +99,7 @@ def orientation_analysis(img, sigma, binning, plotf=False):
     if plotf:    
         plt.figure()
         plt.imshow(img, cmap='gray')
-        plt.quiver(X, Y, np.cos(orientation), np.sin(orientation), angles='xy', scale=1/binning, width=0.5, headaxislength=0, headlength=0, pivot='mid', color='forestgreen', units='xy')
+        plt.quiver(X, Y, np.cos(orientation), np.sin(orientation), angles='xy', scale=1/binning, width=1.5, headaxislength=0, headlength=0, pivot='mid', color='red', units='xy')
         # headaxislength = 0 and headlength=0 to remove arrows
         # units = 'xy' to get into absolute units (by default, relative to the image size)
         # pivot ='mid' so the point is at the middle of the body

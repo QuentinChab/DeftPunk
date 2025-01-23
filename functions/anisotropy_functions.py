@@ -257,3 +257,41 @@ def crop_and_rotate(orientation, xcenter, ycenter, axis, cropsize):
     # rot_angle = np.arctan2(vyrot, vxrot)/2
     
     return xcrop, ycrop, np.cos(rot_angle), np.sin(rot_angle)
+
+def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None):
+    sh = field.shape
+    
+    # the xcenter/ycenter are the indices of the center
+    if xcenter is None:
+        xcenter = round(sh[1]/2)
+    else:
+        xcenter = round(xcenter)
+    
+    if ycenter is None:
+        ycenter = round(sh[0]/2)
+    else:
+        ycenter = round(ycenter)
+    
+    
+    bigbox = cropsize
+    lx1 = xcenter - max(0, xcenter-bigbox)
+    lx2 = min(sh[1], xcenter+bigbox) - xcenter
+    ly1 = ycenter - max(0, ycenter-bigbox)
+    ly2 = min(sh[0], ycenter+bigbox) - ycenter
+    x1 = xcenter - min(lx1, lx2)
+    x2 = xcenter + min(lx1, lx2)
+    y1 = ycenter - min(ly1, ly2)
+    y2 = ycenter + min(ly1, ly2)
+    padx = bigbox-min(lx1, lx2)
+    pady = bigbox-min(ly1, ly2)
+ 
+    
+    xcrop_ = np.arange(x1-xcenter,x2-xcenter)
+    ycrop_ = np.arange(y1-ycenter,y2-ycenter)
+    xcrop, ycrop = np.meshgrid(xcrop_, ycrop_)
+    piece_defect = field[y1:y2, x1:x2]
+    piece_defect = np.pad(piece_defect, ((pady, pady), (padx, padx)), mode='constant', constant_values=np.nan)
+    
+    rot_field = scipy.ndimage.rotate(piece_defect, -axis*180/np.pi, reshape=False, cval=np.nan)
+    
+    return xcrop, ycrop, rot_field

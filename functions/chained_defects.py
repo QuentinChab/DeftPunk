@@ -20,6 +20,7 @@ from matplotlib.colors import Normalize
 from tkinter import filedialog
 import trackpy as tp
 from matplotlib.animation import ArtistAnimation, FuncAnimation, FFMpegWriter
+from scipy import stats
 import os
 
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
@@ -538,15 +539,12 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan, endsav
     ### Where the infinite loop allow us to not be garbage collected (if I understand well) ###
     # it stops when the display window is closed: either by user or when OK is clicked on
     plt.show()
-    while plt.fignum_exists(fig.number):
-        plt.pause(0.1)
+    # while plt.fignum_exists(fig.number):
+    #     plt.pause(0.1)
         
-    return defect_char, w_slider.val, R_slider.val, Thresh_slider.val
+    return defect_char, w_slider.val, R_slider.val, Thresh_slider.val, [OKbutton, Savebutton, Circlebutton, Fieldbutton, button, reversebutton]
 
 
-####################################
-# Work in Progress
-####################################
 
 def defect_statistics(df, minframe=0, maxframe=np.inf, filt=0, minspace=0):
     # This represents some usual analysis of the data
@@ -672,7 +670,7 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
         img_st = plt.imread(imgpath)
     
     deftab_raw = deftab_
-    deftab = tp.filter_stubs(deftab_raw, filt)
+    deftab = deftab_raw#tp.filter_stubs(deftab_raw, filt)
     
     # if it is a multichannel image (color), take the first one 
 
@@ -952,10 +950,10 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
     
     
     
-    while plt.fignum_exists(fig.number):
-         plt.pause(0.1)
+    # while plt.fignum_exists(fig.number):
+    #      plt.pause(0.1)
     
-    return deftab, memslider.val, searchslider.val, filtslider.val
+    return deftab, memslider.val, searchslider.val, filtslider.val, [loopbutton, databutton, moviebutton, okbutton, startbutton]
         
     
 def add_points(ax, all_data, frame, plot_cbar=False, animated=False):
@@ -1085,9 +1083,15 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     track_param = [None, None, 0]
     stack = False
     
+    keep = [None] # will store reference of interfaces
+    
     filename = fname_in
     
     fig, ax = plt.subplots()
+    
+    # mng = plt.get_current_fig_manager()
+    # mng.window.showMaximized()
+
     if not filename is None:
         img = tf.imread(filename)
         if filename[-3:]=='tif':
@@ -1147,20 +1151,25 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         global filename
         global stack
         global img
-        filename = filedialog.askopenfilename()
+        global defect_char
+        fname = filedialog.askopenfilename()
         
-        img = tf.imread(filename)
-        if filename[-3:]=='tif':
+        if fname[-3:]=='tif':
+            filename = fname
+            img = tf.imread(filename)
             with tf.TiffFile(filename) as tif:
                 axes = tif.series[0].axes
                 
-                if "Z" in axes:
+                if "Z" in axes or "T" in axes:
                     stack=True
                     if "C" in axes:
                         img = np.mean(img, axis=3)
                 elif "C" in axes:
                     img = np.mean(img, axis=2)
+        elif fname[-3:]=='csv':
+            defect_char = pd.read_csv(fname)
         else:
+            filename = fname
             img = plt.imread(filename)
             if len(img.shape)>2:
                 stack = True
@@ -1176,12 +1185,14 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         if filename is None:
             print('Laod an image first!')
         else:
-            defect_char, det_param[0], det_param[1], det_param[2] = defect_analyzer(filename, det_param[0], det_param[1], stack=stack, frame=frame_slider.val, um_per_px=np.nan, endsave=False)
-    
+            defect_char, det_param[0], det_param[1], det_param[2], ref = defect_analyzer(filename, det_param[0], det_param[1], stack=stack, frame=frame_slider.val, um_per_px=np.nan, endsave=False)
+            keep[0] = ref
+            
     def check_track(event):
         global defect_char
         if len(defect_char)>0:
-            defect_char, track_param[0], track_param[1], track_param[2] = check_tracking(filename, defect_char, searchR=track_param[1], memory=track_param[0], filt=track_param[2])
+            defect_char, track_param[0], track_param[1], track_param[2], ref = check_tracking(filename, defect_char, searchR=track_param[1], memory=track_param[0], filt=track_param[2])
+            keep[0] = ref
         else:
             print('You should perform detection first.')    
     
@@ -1217,9 +1228,133 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     frame_slider.on_changed(update_img)
     
     plt.show()
-    while plt.fignum_exists(fig.number):
-        plt.pause(0.1)
+    # while plt.fignum_exists(fig.number):
+    #     plt.pause(0.1)
+    return [loadbutton, trackbutton, savebutton, detbutton, dirbutton, keep]
 
-%matplotlib qt
-if __name__ == "__main__":
-    detect_defect_GUI()
+def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, tunit='frame', t_per_frame=1):
+    fset = []
+    
+    
+    if stack:
+        frame_list = np.unique(dataset['frame'])
+        Nplush = np.empty(len(frame_list))*np.nan
+        Nminush = np.empty(len(frame_list))*np.nan
+        Nplus = np.empty(len(frame_list))*np.nan
+        Nminus = np.empty(len(frame_list))*np.nan
+        N = np.empty(len(frame_list))*np.nan
+        e_mean = np.empty(len(frame_list))*np.nan
+        e_std = np.empty(len(frame_list))*np.nan
+        
+        for i in range(len(frame_list)):
+            subset = dataset[dataset['frame']==frame_list[i]]
+            Nplush[i] = np.sum(np.abs(subset['charge']-0.5)<0.25)
+            Nminush[i] = np.sum(np.abs(subset['charge']+0.5)<0.25)
+            Nplus[i] = np.sum(np.abs(subset['charge']-1)<0.25)
+            Nminus[i] = np.sum(np.abs(subset['charge']+1)<0.25)
+            N[i] = len(subset)
+            e_mean[i] = np.nanmean(subset['Anisotropy'])
+            e_std[i] = np.nanstd(subset['Anisotropy'])
+        No = N - Nminus - Nminush - Nplush - Nplus
+        
+        # Number of defect over time
+        fnum = plt.figure()
+        if np.any(Nminus):
+            plt.plot(frame_list*t_per_frame, Nminus, '.', label='-1 defect')
+        if np.any(Nminush):
+            plt.plot(frame_list*t_per_frame, Nminush, '.', label='-1/2 defect')
+        if np.any(Nplush):
+            plt.plot(frame_list*t_per_frame, Nplush, '.', label='+1/2 defect')
+        if np.any(Nplus):
+            plt.plot(frame_list*t_per_frame, Nplush, '.', label='+1 defect')
+        if np.any(No):
+            plt.plot(frame_list*t_per_frame, No, '.', label='other defects')
+        plt.xlabel('Time ['+tunit+']')
+        plt.ylabel('Number of defects')
+        plt.legend()
+        plt.tight_layout()
+        fset.append(fnum)
+        
+        # Mean anisotropy over time
+        fte = plt.figure()
+        plt.plot(frame_list*t_per_frame, e_mean)
+        plt.fill_between(frame_list*t_per_frame, e_mean-e_std, e_mean+e_std, alpha=0.5, color=plt.gca().lines[-1].get_color())
+        plt.xlabel('Time ['+tunit+']')
+        plt.ylabel('Anisotropy')
+        plt.tight_layout()
+        fset.append(fte)
+        
+        # Defect movement
+        
+        
+        # Defect density
+        subset = dataset[dataset['frame']==frame]
+        if not (img is None):
+            img = img[frame]
+        
+    else:
+        subset = dataset
+    
+    fdf = plt.figure()
+    # density histogram
+    if img is None:
+        r = [[subset['x'].min(), subset['x'].max()], [subset['y'].min(), subset['y'].max()]]
+        s = (r[0][1]-r[0][0], r[1][1]-r[1][0])
+    else:
+        plt.subplot(1,2,1)
+        plt.imshow(img)
+        plt.plot(subset['x'], subset['y'], 'k.')
+        plt.subplot(1,2,2)
+        s = img.shape
+        r = [[0, s[1]],[0, s[0]]]
+    b = max(10, int(min(*s)/8)) # we want at least 8 points per box but at least 10 boxes
+    # Density map at frame_th frame
+    # X, Y = np.mgrid[r[0][0]:r[0][1]:b*1j, r[1][0]:r[1][1]:b*1j]
+    x_grid = np.linspace(r[0][0], r[0][1], b)
+    y_grid = np.linspace(r[1][0], r[1][1], b)
+    X, Y = np.meshgrid(x_grid, y_grid)
+    dx = s[0] / (b - 1)  # pixel width
+    dy = s[1] / (b - 1)  # pixel height
+    positions = np.vstack([X.ravel(), Y.ravel()])
+    values = np.vstack([subset['x'], subset['y']])
+    kernel = stats.gaussian_kde(values)
+    Z = np.reshape(kernel(positions).T, X.shape)/dx/dy
+    plt.imshow(Z.T, cmap=plt.cm.gist_earth_r, extent=[*r[0], *r[1]], origin='lower')
+    # plt.hist2d(subset['x'], subset['y'], bins=b, weights=np.ones(len(subset))*1/b/unit_per_px, range=r, cmap='Reds') #weights ensures unit consistency
+    plt.plot(subset['x'], subset['y'], 'k.')
+    plt.gca().invert_yaxis()
+    plt.colorbar(label='Defect density [1/'+unit+'$^2$]')
+    if stack:
+        plt.title('At t=%.0f'%(frame*t_per_frame)+tunit)
+    plt.tight_layout()
+    fset.append(fdf)
+    
+    fh = plt.figure()
+    plt.hist(dataset['Anisotropy'], bins=20)
+    plt.xlim([-1,1])
+    plt.xlabel('Anisotropy')
+    plt.ylabel('Counts')
+    plt.tight_layout()
+    fset.append(fh)
+    
+    return fset
+        
+
+def defect_pattern(field, dataset, cropsize = 30):    
+    pset = dataset[np.abs(dataset['charge']-0.5)<0.2]
+    mset = dataset[np.abs(dataset['charge']+0.5)<0.2]
+    patterns_p = np.empty((len(pset), cropsize*2, cropsize*2))
+    patterns_m = np.empty((len(mset), cropsize*2, cropsize*2))
+    
+    for ip in range(len(pset)):
+        xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-pset['axis'].iloc[ip], cropsize=cropsize, xcenter=pset['x'].iloc[ip], ycenter=pset['y'].iloc[ip])
+        patterns_p[ip] = rot_field
+    for im in range(len(mset)):
+        xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-pset['axis'].iloc[im], cropsize=cropsize, xcenter=pset['x'].iloc[im], ycenter=pset['y'].iloc[im])
+        patterns_m[im] = rot_field
+    
+    return np.mean(patterns_p, axis=0), np.mean(patterns_m, axis=0)
+
+# %matplotlib qt
+# if __name__ == "__main__":
+#     keep = detect_defect_GUI()
