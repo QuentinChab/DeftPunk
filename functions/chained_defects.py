@@ -851,12 +851,12 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
         deftab.to_csv(fold) # the DataFrame is saved as csv
     
     def save_movie(event):
-        fold = filedialog.asksaveasfilename(defaultextension='.gif') # the user choses a place in file explorer
+        fold = filedialog.asksaveasfilename(defaultextension='.tif') # the user choses a place in file explorer
         #writervideo = FFMpegWriter(fps=30)
         if ani[0] is None:
             Start_Animation(None)
             #plt.close()
-        ani[0].save(fold, writer='pillow', fps=30)#, writer=writervideo)#, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as avi
+        ani[0].save(fold)#, writer='pillow')#, fps=30)#, writer=writervideo)#, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as avi
     
     def finish(event):
         plt.close(fig)
@@ -934,8 +934,11 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
         #### Trak defects irrespective of their charge. We can have mixed trajectories
         tempdf = tp.link(deftab_raw, search_range=searchslider.val, memory=memslider.val)
         deftab_raw['particle'] = tempdf['particle']
-        deftab_temp = tp.filter_stubs(deftab_raw, filtslider.val)
-        deftab = deftab_temp
+        if filtslider.val:
+            deftab_temp = tp.filter_stubs(deftab_raw, filtslider.val)
+            deftab = deftab_temp
+        else:
+            deftab = deftab_raw
         # Ndiff = len(deftab_temp) - len(deftab)
         # if Ndiff>0:    
         #     deftab.iloc[:,:] = deftab_temp.iloc[:len(deftab), :]
