@@ -858,9 +858,13 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
             #plt.close()
         ani[0].save(fold)#, writer='pillow')#, fps=30)#, writer=writervideo)#, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as avi
     
+    is_open = True
     def finish(event):
+        nonlocal is_open
+        is_open = False
         plt.close(fig)
-        return deftab
+        #return deftab
+        #return deftab, memslider.val, searchslider.val, filtslider.val, [loopbutton, databutton, moviebutton, okbutton, startbutton]
     
     loopbutton.on_clicked(checkloop)
     databutton.on_clicked(save_data)
@@ -953,8 +957,9 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
     
     
     
-    # while plt.fignum_exists(fig.number):
-    #      plt.pause(0.1)
+    while is_open:
+        fig.canvas.flush_events()
+        plt.pause(0.1)
     
     return deftab, memslider.val, searchslider.val, filtslider.val, [loopbutton, databutton, moviebutton, okbutton, startbutton]
         
@@ -1081,9 +1086,10 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     global defect_char
     global stack
     global img
+    global track_param
     defect_char = pd.DataFrame()
     det_param = [f_in, R_in, 0.8]
-    track_param = [None, None, 0]
+    track_param = [4, 30, 0]
     stack = False
     
     keep = [None] # will store reference of interfaces
@@ -1185,6 +1191,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
 
     def detection(event):
         global defect_char
+        global track_param
         if filename is None:
             print('Laod an image first!')
         else:
@@ -1193,15 +1200,20 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
             
     def check_track(event):
         global defect_char
+        global track_param
         if len(defect_char)>0:
             defect_char, track_param[0], track_param[1], track_param[2], ref = check_tracking(filename, defect_char, searchR=track_param[1], memory=track_param[0], filt=track_param[2])
+            #print(track_param)
             keep[0] = ref
+            #track_param = [track_param_0, track_param_0,track_param_0]
         else:
             print('You should perform detection first.')    
     
     def savedat(event):
+        print(det_param)
         fold = filedialog.asksaveasfilename(defaultextension='.csv')
-        defect_char.to_csv(fold)
+        defect_char_to_save = tp.filter_stubs(defect_char, track_param[2])
+        defect_char_to_save.to_csv(fold)
        
     
     def update_img(event):
@@ -1353,10 +1365,10 @@ def defect_pattern(field, dataset, cropsize = 30):
         xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-pset['axis'].iloc[ip], cropsize=cropsize, xcenter=pset['x'].iloc[ip], ycenter=pset['y'].iloc[ip])
         patterns_p[ip] = rot_field
     for im in range(len(mset)):
-        xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-pset['axis'].iloc[im], cropsize=cropsize, xcenter=pset['x'].iloc[im], ycenter=pset['y'].iloc[im])
+        xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-mset['axis'].iloc[im], cropsize=cropsize, xcenter=mset['x'].iloc[im], ycenter=mset['y'].iloc[im])
         patterns_m[im] = rot_field
     
-    return np.mean(patterns_p, axis=0), np.mean(patterns_m, axis=0)
+    return patterns_p, patterns_m#np.mean(patterns_p, axis=0), np.mean(patterns_m, axis=0)
 
 # %matplotlib qt
 # if __name__ == "__main__":

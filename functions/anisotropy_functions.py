@@ -271,8 +271,26 @@ def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None):
         ycenter = round(sh[0]/2)
     else:
         ycenter = round(ycenter)
+        
+    #center around middle point
+    xc = xcenter-sh[1]/2
+    yc = ycenter-sh[0]/2
+    
+    #rotate image and coordinates
+    rot_field = scipy.ndimage.rotate(field, -axis*180/np.pi, reshape=True, cval=np.nan)
+    xrotc = xc*np.cos(axis) - yc*np.sin(axis)
+    yrotc = yc*np.cos(axis) + xc*np.sin(axis)
+    # back into indices center
+    sh = rot_field.shape
+    xcenter = round(xrotc + sh[1]/2)
+    ycenter = round(yrotc + sh[0]/2)
+    
+    # plt.figure()
+    # plt.imshow(rot_field, cmap='gray')
+    # plt.plot(xcenter, ycenter, 'o')
     
     
+    #crop
     bigbox = cropsize
     lx1 = xcenter - max(0, xcenter-bigbox)
     lx2 = min(sh[1], xcenter+bigbox) - xcenter
@@ -289,9 +307,17 @@ def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None):
     xcrop_ = np.arange(x1-xcenter,x2-xcenter)
     ycrop_ = np.arange(y1-ycenter,y2-ycenter)
     xcrop, ycrop = np.meshgrid(xcrop_, ycrop_)
-    piece_defect = field[y1:y2, x1:x2]
+    piece_defect = rot_field[y1:y2, x1:x2]
+    
+    # plt.figure()
+    # plt.imshow(piece_defect, cmap='gray')
+    
+    #pad to reach required size
     piece_defect = np.pad(piece_defect, ((pady, pady), (padx, padx)), mode='constant', constant_values=np.nan)
     
-    rot_field = scipy.ndimage.rotate(piece_defect, -axis*180/np.pi, reshape=False, cval=np.nan)
+    # plt.figure()
+    # plt.imshow(piece_defect, cmap='gray')
+    # print(piece_defect.shape)
+    #rot_field = scipy.ndimage.rotate(piece_defect, -axis*180/np.pi, reshape=False, cval=np.nan)
     
-    return xcrop, ycrop, rot_field
+    return xcrop, ycrop, piece_defect#rot_field
