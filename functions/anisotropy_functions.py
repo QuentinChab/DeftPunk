@@ -399,7 +399,7 @@ def circular_hist(ax, x, bins=16, density=True, offset=0, gaps=True):
 
     return n, bins, patches
 
-def motility_analysis(dataset, dt=1):
+def motility_analysis(dataset, dt=1, unit_per_frame=1, unit_t = 'frame', unit_per_px = 1, unit_space = 'px'):
     datap = dataset[dataset['charge']==0.5]
     part_vec = datap['particle']
     part_list = np.unique(part_vec)
@@ -409,13 +409,13 @@ def motility_analysis(dataset, dt=1):
     
     #polar plot histogram and trajectory schematic
     
-    plt.figure()
+    f_traj = plt.figure()
     plt.quiver(-1,0, label='Head-to-tail direction')
     
     for i in range(len(part_list)):
         datapart = datap[datap['particle']==part_list[i]]
-        vx = np.diff(datapart['x'], dt)
-        vy = np.diff(datapart['y'], dt)
+        vx = np.diff(datapart['x'], dt)*unit_per_px/unit_per_frame
+        vy = np.diff(datapart['y'], dt)*unit_per_px/unit_per_frame
         axis = datapart['axis'].to_numpy()[:-dt]
         dangle = np.arccos((vx*np.cos(axis) + vy*np.sin(axis))/np.sqrt(vx**2+vy**2))
         dangle_list[i] = dangle
@@ -427,17 +427,17 @@ def motility_analysis(dataset, dt=1):
         xtraj = np.zeros(len(dangle)+1)
         ytraj = np.zeros(len(dangle)+1)
         for j in range(1,len(xtraj)):
-            xtraj[j] = xtraj[j-1]+vamp[j-1]*np.cos(dangle[j-1])
-            ytraj[j] = ytraj[j-1]+vamp[j-1]*np.sin(dangle[j-1])
+            xtraj[j] = (xtraj[j-1]+vamp[j-1]*np.cos(dangle[j-1]))
+            ytraj[j] = (ytraj[j-1]+vamp[j-1]*np.sin(dangle[j-1]))
         plt.plot(xtraj, ytraj)
         
-    plt.xlabel('x')
-    plt.ylabel('y')
+    plt.xlabel('x ['+unit_space+']')
+    plt.ylabel('y ['+unit_space+']')
     plt.legend()
     plt.title('Defect trajectory with respect to defect axis')
     plt.tight_layout()
     
-    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    f_polar, ax = plt.subplots(subplot_kw={'projection': 'polar'})
     circular_hist(ax, np.array(dangle_flat), bins=16, density=True, offset=0, gaps=True)
     plt.title('Angle between defect axis and velocity \n over %.0f points.\n Frequency proportionnal to box area.'%(dt))
     plt.tight_layout()
@@ -452,8 +452,8 @@ def motility_analysis(dataset, dt=1):
         SD_list = []
         for ip in range(len(part_list)):
             datapart = datap[datap['particle']==part_list[ip]]
-            vx = np.diff(datapart['x'], dt_list[it])
-            vy = np.diff(datapart['y'], dt_list[it])
+            vx = np.diff(datapart['x'], dt_list[it])*unit_per_px/unit_per_frame
+            vy = np.diff(datapart['y'], dt_list[it])*unit_per_px/unit_per_frame
             SD = np.square(vx) + np.square(vy)
             SD_list = [*SD_list, *SD]
         MSD[it] = np.nanmean(SD_list)
@@ -462,6 +462,7 @@ def motility_analysis(dataset, dt=1):
     def linear_model(log_t, alpha, log_A):
         return log_A + log_t*alpha
     
+    dt_list = dt_list*unit_per_frame
     err_RMSD = MSD_std/2/MSD
     err_logRMSD = err_RMSD/np.sqrt(MSD)
     weights = 1/np.square(err_logRMSD)
@@ -481,22 +482,23 @@ def motility_analysis(dataset, dt=1):
     
     fitted_RMSD = A * dt_list**alpha
     
-    plt.figure()
+    f_dif = plt.figure()
     plt.plot(dt_list, np.sqrt(MSD), '+', label='Data')
     plt.fill_between(dt_list, np.sqrt(MSD)-np.sqrt(MSD_std), np.sqrt(MSD)+np.sqrt(MSD_std), alpha=0.5, color=plt.gca().lines[-1].get_color())
-    plt.plot(dt_list, fitted_RMSD, label='Fit: RSMD = %.3f$\\cdot\\tau^{%.3f}$'%(A, alpha))
+    plt.plot(dt_list, fitted_RMSD, label='Fit: RMSD = %.3f$\\cdot\\tau^{%.3f}$'%(A, alpha))
     plt.yscale('log')
     plt.xscale('log')
-    plt.xlabel('Time delay $\\tau$ [frames]')
-    plt.ylabel('RMS Displacement [px]')
+    plt.xlabel('Time delay $\\tau$ ['+unit_t+']')
+    plt.ylabel('RMS Displacement ['+unit_space+']')
     plt.legend()
     plt.title('The diffusion coefficient is $D=%.3f\\pm%.3f$\n The diffusion exponent is $\\alpha=%.3f\\pm%.3f$'%(D, D_err, alpha, alpha_err))
     plt.tight_layout()
     
     
-    plt.figure()
+    f_hist = plt.figure()
     plt.hist(SD_flat, bins=20)
-    plt.xlabel('Velocity amplitude [px/frame]')
+    plt.xlabel('Velocity amplitude ['+unit_space+'/'+unit_t+']')
     plt.ylabel('Counts')
     plt.tight_layout()
     
+    return [f_traj, f_polar, f_dif, f_hist]
