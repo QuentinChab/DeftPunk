@@ -749,6 +749,7 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
         quiverM1 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM), np.sin(axisM), angles='xy', color=minuscolor)
         quiverM2 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM+2*np.pi/3), np.sin(axisM+2*np.pi/3), angles='xy', color=minuscolor)
         quiverM3 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM-2*np.pi/3), np.sin(axisM-2*np.pi/3), angles='xy', color=minuscolor)
+        plt.colorbar(cm.ScalarMappable(norm=Normalize(-lim, lim), cmap=e_map), ax=axA, label='Splay-Bend Anisotropy []')
         
         if len(deftab):
             trajdata_x = [ [] for _ in range(int(np.max(deftab['particle'])+1)) ]
@@ -856,7 +857,7 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
         if ani[0] is None:
             Start_Animation(None)
             #plt.close()
-        ani[0].save(fold)#, writer='pillow')#, fps=30)#, writer=writervideo)#, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as avi
+        ani[0].save(fold, writer='pillow')#, fps=30)#, writer=writervideo)#, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as avi
     
     is_open = True
     def finish(event):
@@ -1210,9 +1211,16 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
             print('You should perform detection first.')    
     
     def savedat(event):
-        print(det_param)
         fold = filedialog.asksaveasfilename(defaultextension='.csv')
         defect_char_to_save = tp.filter_stubs(defect_char, track_param[2])
+        
+        #re-index particle column so that it is not absurd
+        if 'particle' in defect_char_to_save.columns:
+            part_vec = defect_char_to_save['particle'].to_numpy()
+            part_list = np.unique(part_vec)
+            for i in range(len(part_list)):
+                defect_char_to_save['particle'].iloc[part_vec==part_list[i]]=i
+        
         defect_char_to_save.to_csv(fold)
        
     
@@ -1368,7 +1376,9 @@ def defect_pattern(field, dataset, cropsize = 30):
         xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-mset['axis'].iloc[im], cropsize=cropsize, xcenter=mset['x'].iloc[im], ycenter=mset['y'].iloc[im])
         patterns_m[im] = rot_field
     
-    return patterns_p, patterns_m#np.mean(patterns_p, axis=0), np.mean(patterns_m, axis=0)
+    return np.nanmean(patterns_p, axis=0), np.nanmean(patterns_m, axis=0)
+
+
 
 # %matplotlib qt
 # if __name__ == "__main__":

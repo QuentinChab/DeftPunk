@@ -13,6 +13,7 @@ import random
 from detect_defects import defect_detection
 from math import ceil
 from scipy.interpolate import interp1d
+from scipy.optimize import curve_fit
 import os
 plt.rcParams.update({'font.size': 16})
 
@@ -321,3 +322,181 @@ def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None):
     #rot_field = scipy.ndimage.rotate(piece_defect, -axis*180/np.pi, reshape=False, cval=np.nan)
     
     return xcrop, ycrop, piece_defect#rot_field
+
+def circular_hist(ax, x, bins=16, density=True, offset=0, gaps=True):
+    """
+    Produce a circular histogram of angles on ax.
+    
+    from jwalton on stack overflow https://stackoverflow.com/questions/22562364/circular-polar-histogram-in-python [consulted 17/02/2025]
+    Parameters
+    ----------
+    ax : matplotlib.axes._subplots.PolarAxesSubplot
+        axis instance created with subplot_kw=dict(projection='polar').
+
+    x : array
+        Angles to plot, expected in units of radians.
+
+    bins : int, optional
+        Defines the number of equal-width bins in the range. The default is 16.
+
+    density : bool, optional
+        If True plot frequency proportional to area. If False plot frequency
+        proportional to radius. The default is True.
+
+    offset : float, optional
+        Sets the offset for the location of the 0 direction in units of
+        radians. The default is 0.
+
+    gaps : bool, optional
+        Whether to allow gaps between bins. When gaps = False the bins are
+        forced to partition the entire [-pi, pi] range. The default is True.
+
+    Returns
+    -------
+    n : array or list of arrays
+        The number of values in each bin.
+
+    bins : array
+        The edges of the bins.
+
+    patches : `.BarContainer` or list of a single `.Polygon`
+        Container of individual artists used to create the histogram
+        or list of such containers if there are multiple input datasets.
+    """
+    # Wrap angles to [-pi, pi)
+    x = (x+np.pi) % (2*np.pi) - np.pi
+    
+    # Force bins to partition entire circle
+    if not gaps:
+        bins = np.linspace(-np.pi, np.pi, num=bins+1)
+
+    # Bin data and record counts
+    n, bins = np.histogram(x[np.logical_not(np.isnan(x))], bins=bins)
+
+    # Compute width of each bin
+    widths = np.diff(bins)
+
+    # By default plot frequency proportional to area
+    if density:
+        # Area to assign each bin
+        area = n / x.size
+        # Calculate corresponding bin radius
+        radius = (area/np.pi) ** .5
+    # Otherwise plot frequency proportional to radius
+    else:
+        radius = n
+
+    # Plot data on ax
+    patches = ax.bar(bins[:-1], radius, zorder=1, align='edge', width=widths,
+                     edgecolor='C0', fill=False, linewidth=1)
+
+    # Set the direction of the zero angle
+    ax.set_theta_offset(offset)
+
+    # Remove ylabels for area plots (they are mostly obstructive)
+    if density:
+        ax.set_yticks([])
+
+    return n, bins, patches
+
+def motility_analysis(dataset, dt=1):
+    datap = dataset[dataset['charge']==0.5]
+    part_vec = datap['particle']
+    part_list = np.unique(part_vec)
+    dangle_list = [ [] for _ in range(len(part_list)) ]
+    dangle_flat = []
+    SD_flat = []
+    
+    #polar plot histogram and trajectory schematic
+    
+    plt.figure()
+    plt.quiver(-1,0, label='Head-to-tail direction')
+    
+    for i in range(len(part_list)):
+        datapart = datap[datap['particle']==part_list[i]]
+        vx = np.diff(datapart['x'], dt)
+        vy = np.diff(datapart['y'], dt)
+        axis = datapart['axis'].to_numpy()[:-dt]
+        dangle = np.arccos((vx*np.cos(axis) + vy*np.sin(axis))/np.sqrt(vx**2+vy**2))
+        dangle_list[i] = dangle
+        dangle_flat = [*dangle_flat, *dangle]
+        vamp = np.sqrt(vx**2 + vy**2)
+        
+        SD_flat = [*SD_flat, *vamp]
+        #build traj
+        xtraj = np.zeros(len(dangle)+1)
+        ytraj = np.zeros(len(dangle)+1)
+        for j in range(1,len(xtraj)):
+            xtraj[j] = xtraj[j-1]+vamp[j-1]*np.cos(dangle[j-1])
+            ytraj[j] = ytraj[j-1]+vamp[j-1]*np.sin(dangle[j-1])
+        plt.plot(xtraj, ytraj)
+        
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.legend()
+    plt.title('Defect trajectory with respect to defect axis')
+    plt.tight_layout()
+    
+    fig, ax = plt.subplots(subplot_kw={'projection': 'polar'})
+    circular_hist(ax, np.array(dangle_flat), bins=16, density=True, offset=0, gaps=True)
+    plt.title('Angle between defect axis and velocity \n over %.0f points.\n Frequency proportionnal to box area.'%(dt))
+    plt.tight_layout()
+    
+    # plot diffusion 
+    
+    Npart = [ np.sum(part_vec==part) for part in part_list]
+    dt_list = np.arange(1, np.max(Npart))
+    MSD = np.empty(len(dt_list))
+    MSD_std = np.empty(len(dt_list))
+    for it in range(len(dt_list)):
+        SD_list = []
+        for ip in range(len(part_list)):
+            datapart = datap[datap['particle']==part_list[ip]]
+            vx = np.diff(datapart['x'], dt_list[it])
+            vy = np.diff(datapart['y'], dt_list[it])
+            SD = np.square(vx) + np.square(vy)
+            SD_list = [*SD_list, *SD]
+        MSD[it] = np.nanmean(SD_list)
+        MSD_std[it] = np.nanstd(SD_list)
+    
+    def linear_model(log_t, alpha, log_A):
+        return log_A + log_t*alpha
+    
+    err_RMSD = MSD_std/2/MSD
+    err_logRMSD = err_RMSD/np.sqrt(MSD)
+    weights = 1/np.square(err_logRMSD)
+    params, cov = curve_fit(linear_model, np.log(dt_list), np.log(MSD)/2, bounds=(0,np.inf), maxfev=int(1e5))#, p0=(0.5, np.nanmean(np.log(MSD)/np.log(dt_list))))#, sigma=err_logRMSD, absolute_sigma=True, ))
+    alpha, log_A = params
+    alpha_err, log_A_err = np.sqrt(np.diag(cov))
+    A = np.exp(log_A)
+    A_err = A * log_A_err
+    D = A**2 / 4
+    D_err = 2*A*A_err/4
+    
+    # params, cov = curve_fit(linear_model, dt_list, np.sqrt(MSD), maxfev=int(1e4), p0=(0.5, np.nanmean(np.sqrt(MSD/dt_list))))#, sigma=err_RMSD, absolute_sigma=True)
+    # alpha, A= params
+    # alpha_err, A_err = np.sqrt(np.diag(cov))
+    # D = A**2/4
+    # D_err = 2*A*A_err/4
+    
+    fitted_RMSD = A * dt_list**alpha
+    
+    plt.figure()
+    plt.plot(dt_list, np.sqrt(MSD), '+', label='Data')
+    plt.fill_between(dt_list, np.sqrt(MSD)-np.sqrt(MSD_std), np.sqrt(MSD)+np.sqrt(MSD_std), alpha=0.5, color=plt.gca().lines[-1].get_color())
+    plt.plot(dt_list, fitted_RMSD, label='Fit: RSMD = %.3f$\\cdot\\tau^{%.3f}$'%(A, alpha))
+    plt.yscale('log')
+    plt.xscale('log')
+    plt.xlabel('Time delay $\\tau$ [frames]')
+    plt.ylabel('RMS Displacement [px]')
+    plt.legend()
+    plt.title('The diffusion coefficient is $D=%.3f\\pm%.3f$\n The diffusion exponent is $\\alpha=%.3f\\pm%.3f$'%(D, D_err, alpha, alpha_err))
+    plt.tight_layout()
+    
+    
+    plt.figure()
+    plt.hist(SD_flat, bins=20)
+    plt.xlabel('Velocity amplitude [px/frame]')
+    plt.ylabel('Counts')
+    plt.tight_layout()
+    
