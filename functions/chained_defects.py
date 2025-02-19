@@ -9,7 +9,7 @@ It's the highest function of the hierarchy: it only treats interface
 """
 import matplotlib.pyplot as plt
 import numpy as np
-from matplotlib.widgets import Button, Slider, CheckButtons
+from matplotlib.widgets import Button, Slider, CheckButtons, TextBox
 import pandas as pd
 import compute_anisotropy as can
 import anisotropy_functions as fan
@@ -28,7 +28,7 @@ origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 bin_factor = 4
 
-def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan, endsave=True):
+def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=1, unit='px', endsave=True):
     """Calls the interface to analyze defect and their anisotropy on an image
        
     The exact choice of detection parameter is described at the end.
@@ -156,10 +156,12 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan, endsav
     lim = 0.5 # limits of anisotropy colorbar
     
     ##### Sliders ############
-    if np.isnan(um_per_px):
+    if unit=='px':
         labw = 'Feature size [px]'
+        labR = "Detection\n radius [px]"
     else:
-        labw = 'Feature size [px] (1px=%.2fum)'%(um_per_px)
+        labw = 'Feature size [px] (%.2f '%(um_per_px*w)+unit+')'
+        labR = "Detection radius [px]\n(%.2f "%(um_per_px*R)+unit+")"
     # Make a horizontal slider to control the feature size w.
     axw = fig.add_axes([0.25, 0.1, 0.65, 0.03])
     w_slider = Slider(
@@ -175,7 +177,7 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan, endsav
     axR = fig.add_axes([0.1, 0.25, 0.0225, 0.63])
     R_slider = Slider(
         ax=axR,
-        label="Detection\n radius [px]",
+        label=labR,
         valmin=2,
         valmax=round(len(img)/4),
         valinit=R,
@@ -299,6 +301,9 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan, endsav
         global defect_char
         global bin_
         
+        if not(unit=='px'):
+            w_slider.label.set_text('Feature size [px] (%.2f '%(um_per_px*w_slider.val)+unit+')')
+        
         # get new defects and anisotropies
         sigma = round(1.5*w_slider.val) #integration size for orientation field
         bin_ = round(w_slider.val/bin_factor) # Sampling size for orientation field
@@ -344,6 +349,10 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=np.nan, endsav
         field = my_field[0]
         bin_ = round(w_slider.val/bin_factor) # Sampling size for orientation field
         new_anisotropy = np.empty(len(defect_char))*np.nan
+        
+        if not(unit=='px'):
+            R_slider.label.set_text("Detection radius [px]\n(%.2f "%(um_per_px*R_slider.val)+unit+")")
+        
         for i in range(len(defect_char)):
             e_vec_i, err_vec_i, cost_vec_i, th = can.one_defect_anisotropy(field, R_slider.val/bin_, xc=defect_char['x'][i]/bin_, yc=defect_char['y'][i]/bin_, axis=defect_char['axis'][i])
             new_anisotropy[i] = e_vec_i
@@ -1087,11 +1096,16 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     global defect_char
     global stack
     global img
-    global track_param
+    global track_param    
+    
     defect_char = pd.DataFrame()
     det_param = [f_in, R_in, 0.8]
     track_param = [4, 30, 0]
     stack = False
+    unit = 'px'
+    unit_per_px = 1
+    unit_t = 'frame'
+    unit_per_frame = 1
     
     keep = [None] # will store reference of interfaces
     
@@ -1114,6 +1128,24 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                         img = np.mean(img, axis=3)
                 elif "C" in axes:
                     img = np.mean(img, axis=2)
+                
+                if tif.imagej_metadata:
+                    try:
+                        unit_maybe = tif.imagej_metadata['unit']
+                        if unit_maybe!='':
+                            unit=unit_maybe
+                    except:
+                        flipiti_useless_statement = 90
+                    try:
+                        unitt = tif.imagej_metadata['time unit']
+                        unit_t = unitt
+                        unit_per_frame = tif.imagej_metadata['finterval']
+                    except:
+                        unitt=1 # blank statement for the required except keyword
+                xres = tif.pages[0].tags.get('XResolution').value
+                if xres:
+                    unit_per_px = xres[0]/xres[1]
+                
         else:
             img = plt.imread(filename)
             if len(img.shape)>2:
@@ -1124,21 +1156,23 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         img = plt.imread('..'+os.sep+'GUI_images'+os.sep+'spot_defect.jpg')
         ax.imshow(img, cmap='binary')
     plt.title('Image displayed for\n parameter choice')
-    plt.subplots_adjust(bottom=0.2, left=0.4)  # Leave space for the button
+    plt.subplots_adjust(bottom=0.2, left=0.4, right=0.8)  # Leave space for the button
     # buttons: load image // launch detection // check tracking // save // apply on other image
     # Display: frame_th image of laoded dataset
     
+    loadax = fig.add_axes([0.05, 0.8, 0.25, 0.07])
+    loadbutton = Button(loadax, 'Load image', hovercolor='0.975')
     detax = fig.add_axes([0.05, 0.65, 0.25, 0.07])
     detbutton = Button(detax, 'Start Detection', hovercolor='0.975')
     trackax = fig.add_axes([0.05, 0.5, 0.25, 0.07])
     trackbutton = Button(trackax, 'Check tracking', hovercolor='0.975')
     saveax = fig.add_axes([0.05, 0.35, 0.25, 0.07])
     savebutton = Button(saveax, 'Save Data', hovercolor='0.975')
-    loadax = fig.add_axes([0.05, 0.8, 0.25, 0.07])
-    loadbutton = Button(loadax, 'Load image', hovercolor='0.975')
     dirax = fig.add_axes([0.05, 0.2, 0.25, 0.07])
     dirbutton = Button(dirax, 'Apply on\n directory', hovercolor='0.975')
      
+    
+    
     axframe = fig.add_axes([0.25, 0.1, 0.65, 0.03])
     frame_slider = Slider(
         ax=axframe,
@@ -1162,6 +1196,10 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         global stack
         global img
         global defect_char
+        nonlocal unit
+        nonlocal unit_per_px
+        nonlocal unit_t
+        nonlocal unit_per_frame
         fname = filedialog.askopenfilename()
         
         if fname[-3:]=='tif':
@@ -1176,6 +1214,25 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                         img = np.mean(img, axis=3)
                 elif "C" in axes:
                     img = np.mean(img, axis=2)
+                
+                if tif.imagej_metadata:
+                    try:
+                        unit_maybe = tif.imagej_metadata['unit']
+                        if unit_maybe!='':
+                            unit=unit_maybe
+                    except:
+                        opla = 78
+                        
+                    try:
+                        unitt = tif.imagej_metadata['time unit']
+                        unit_t = unitt
+                        unit_per_frame = tif.imagej_metadata['finterval']
+                    except:
+                        unitt=1 # blank statement for the required except keyword
+                xres = tif.pages[0].tags.get('XResolution').value
+                if xres:
+                    unit_per_px = xres[0]/xres[1]
+                    
         elif fname[-3:]=='csv':
             defect_char = pd.read_csv(fname)
         else:
@@ -1189,14 +1246,15 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         else:
             ax.imshow(img, cmap='binary')
         fig.canvas.draw_idle()
-
+    
+        
     def detection(event):
         global defect_char
         global track_param
         if filename is None:
             print('Laod an image first!')
         else:
-            defect_char, det_param[0], det_param[1], det_param[2], ref = defect_analyzer(filename, det_param[0], det_param[1], stack=stack, frame=frame_slider.val, um_per_px=np.nan, endsave=False)
+            defect_char, det_param[0], det_param[1], det_param[2], ref = defect_analyzer(filename, det_param[0], det_param[1], stack=stack, frame=frame_slider.val, um_per_px=unit_per_px, unit=unit, endsave=False)
             keep[0] = ref
             
     def check_track(event):
@@ -1243,6 +1301,34 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                 
                 defect_table.to_csv(folder+os.sep+'data_'+filename[:-3]+'csv')
     
+    
+    unitax = fig.add_axes([0.85, 0.6, 0.12, 0.07])
+    unitBox = TextBox(unitax, '\n\n\n/px', initial=unit, label_pad=-0.5)
+    uppxax = fig.add_axes([0.85, 0.7, 0.12, 0.07])
+    uppxBox = TextBox(uppxax, '', initial=unit_per_px)
+    unittax = fig.add_axes([0.85, 0.3, 0.12, 0.07])
+    unittBox = TextBox(unittax, '\n\n\n/frame', initial=unit_t, label_pad=-1)
+    fpsax = fig.add_axes([0.85, 0.4, 0.12, 0.07])
+    fpsBox = TextBox(fpsax, '', initial=unit_per_frame)
+    
+    def set_unit(text):
+        nonlocal unit
+        unit = text    
+    def set_unit_per_px(text):
+        nonlocal unit_per_px
+        unit_per_px = float(text)
+    def set_unit_t(text):
+        nonlocal unit_t
+        unit_t = text
+    def set_unit_per_frame(text):
+        nonlocal unit_per_frame
+        unit_per_frame = float(text)
+    
+    unitBox.on_submit(set_unit)
+    uppxBox.on_submit(set_unit_per_px)
+    unittBox.on_submit(set_unit_t)
+    fpsBox.on_submit(set_unit_per_frame)
+    
     detbutton.on_clicked(detection)
     trackbutton.on_clicked(check_track)
     savebutton.on_clicked(savedat)
@@ -1250,10 +1336,11 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     dirbutton.on_clicked(on_directory)
     frame_slider.on_changed(update_img)
     
+    
     plt.show()
     # while plt.fignum_exists(fig.number):
     #     plt.pause(0.1)
-    return [loadbutton, trackbutton, savebutton, detbutton, dirbutton, keep]
+    return [loadbutton, trackbutton, savebutton, detbutton, dirbutton, unitBox, uppxBox, unittBox, fpsBox, keep]
 
 def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, tunit='frame', t_per_frame=1):
     fset = []
