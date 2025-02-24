@@ -260,6 +260,7 @@ def crop_and_rotate(orientation, xcenter, ycenter, axis, cropsize):
     return xcrop, ycrop, np.cos(rot_angle), np.sin(rot_angle)
 
 def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None):
+
     sh = field.shape
     
     # the xcenter/ycenter are the indices of the center
@@ -277,6 +278,9 @@ def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None):
     xc = xcenter-sh[1]/2
     yc = ycenter-sh[0]/2
     
+    # plt.figure()
+    # plt.imshow(field, cmap='gray')
+    
     #rotate image and coordinates
     rot_field = scipy.ndimage.rotate(field, -axis*180/np.pi, reshape=True, cval=np.nan)
     xrotc = xc*np.cos(axis) - yc*np.sin(axis)
@@ -293,17 +297,20 @@ def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None):
     
     #crop
     bigbox = cropsize
-    lx1 = xcenter - max(0, xcenter-bigbox)
-    lx2 = min(sh[1], xcenter+bigbox) - xcenter
-    ly1 = ycenter - max(0, ycenter-bigbox)
-    ly2 = min(sh[0], ycenter+bigbox) - ycenter
+    # lx1 = xcenter - max(0, xcenter-bigbox)
+    lx1 = min(bigbox, xcenter)
+    lx2 = min(sh[1]-xcenter, bigbox)
+    ly1 = min(bigbox, ycenter)
+    ly2 = min(sh[0]-ycenter, bigbox)
+    # ly1 = ycenter - max(0, ycenter-bigbox)
+    # ly2 = min(sh[0]-ycenter, bigbox) + ycenter
     x1 = xcenter - min(lx1, lx2)
     x2 = xcenter + min(lx1, lx2)
     y1 = ycenter - min(ly1, ly2)
     y2 = ycenter + min(ly1, ly2)
     padx = bigbox-min(lx1, lx2)
     pady = bigbox-min(ly1, ly2)
- 
+    
     
     xcrop_ = np.arange(x1-xcenter,x2-xcenter)
     ycrop_ = np.arange(y1-ycenter,y2-ycenter)

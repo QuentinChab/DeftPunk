@@ -248,7 +248,7 @@ def track_by_charge(df, searchR, mem):
     return df
 
     
-def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, BoxSize=8, order_threshold=0.25, peak_threshold=0.85, plotit=False, stack=False, savedir = None, give_field=False):
+def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, BoxSize=8, order_threshold=0.25, peak_threshold=0.85, prescribed_field=None, plotit=False, stack=False, savedir = None, give_field=False):
     """
     This function takes the path of an image, compute the orientation field, 
     finds the defect and estimates the naisotropy of the +1/2 types
@@ -330,7 +330,11 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, B
             frames = []
             for i in range(len(img)):
                 print('Computing frame %.0f'%(i+1)+os.sep+'%.0f'%(len(img)))
-                e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = get_anisotropy(img[i], average, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit, stack=True)
+                if not (prescribed_field is None):
+                    input_field = prescribed_field[i]
+                else:
+                    input_field = None
+                e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = get_anisotropy(img[i], average, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=plotit, prescribed_field=input_field, stack=True)
                 e_stack.append(e_vec)
                 err_stack.append(err_vec)
                 cost_stack.append(cost_vec)
@@ -441,7 +445,15 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, B
         img = imgpath
  
     #for ni 
-    orientation, coherency, energy, x, y = orientation_analysis(img, sigma, bin_, plotit)        
+    if prescribed_field is None:
+        orientation, coherency, energy, x, y = orientation_analysis(img, sigma, bin_, plotit)        
+    else:
+        orientation = prescribed_field
+        coherency = np.ones(prescribed_field.shape)
+        sh = orientation.shape
+        x_ = np.arange(sh[1])
+        y_ = np.arange(sh[0])
+        x, y = np.meshgrid(x_, y_)     
     Qloc, boxes, chargeb, defect_axis, centroidsN = defect_detection(orientation, coherency, fov, BoxSize, order_threshold, peak_threshold, plotall=plotit, method='weighted')
     
     # ok_dist will be 0/False if the point has any other defect at a distance of 1.5R, 1/True otherwise
@@ -451,12 +463,15 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, B
     for i in range(len(ok_dist)):
         ok_dist[i] = np.all(np.delete(dist_mat[:,i],i)>mindist)
     
-    N = img.shape
-    x1 = round((bin_ + N[0]-bin_*floor(N[0]/bin_))/2) # To be like OrientationJ. 
-    y1 = round((bin_ + N[1]-bin_*floor(N[1]/bin_))/2)
-    img_centroids = np.empty(centroidsN.shape)
-    img_centroids[:,0] = centroidsN[:,0]*bin_+x1
-    img_centroids[:,1] = centroidsN[:,1]*bin_+y1
+    if not (img is None):
+        N = img.shape
+        x1 = round((bin_ + N[0]-bin_*floor(N[0]/bin_))/2) # To be like OrientationJ. 
+        y1 = round((bin_ + N[1]-bin_*floor(N[1]/bin_))/2)
+        img_centroids = np.empty(centroidsN.shape)
+        img_centroids[:,0] = centroidsN[:,0]*bin_+x1
+        img_centroids[:,1] = centroidsN[:,1]*bin_+y1
+    else:
+        img = np.ones(prescribed_field.shape)*np.nan
     
 
     phi = np.load(origin_file+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
