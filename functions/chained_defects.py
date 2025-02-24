@@ -1238,6 +1238,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         if fname[-3:]=='tif':
             filename = fname
             img = tf.imread(filename)
+            vfield = None
             with tf.TiffFile(filename) as tif:
                 axes = tif.series[0].axes
                 
@@ -1280,6 +1281,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         else:
             filename = fname
             img = plt.imread(filename)
+            vfield = None
             if len(img.shape)>2:
                 stack = True
         if stack:
