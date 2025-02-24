@@ -210,6 +210,7 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=1, unit='px', 
         valmin=0,
         valmax=1,
         valinit=order_threshold,
+        valstep=0.05,
         orientation="vertical"
         )
     
