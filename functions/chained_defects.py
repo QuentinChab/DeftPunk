@@ -29,7 +29,7 @@ origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 bin_factor = 4
 
-def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=1, unit='px', vfield=None, endsave=True):
+def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='px', vfield=None, endsave=True):
     """Calls the interface to analyze defect and their anisotropy on an image
        
     The exact choice of detection parameter is described at the end.
@@ -110,12 +110,16 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=1, unit='px', 
     #initial values
     global defect_char
     global over
+    
+    w = det_param[0]
+    R = det_param[1]
+    
     over = False
     ### Where we define the relation between the parameters ####
     sigma = round(1.5*w) #integration size for orientation field
     bin_ = round(w/bin_factor) # Sampling size for orientation field
     fsig = 2 # in units of bin. Size of filter for order parameter
-    order_threshold = 0.4*fsig
+    order_threshold = det_param[2]
     BoxSize = 6
     peak_threshold = 0.75
     
@@ -489,6 +493,9 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=1, unit='px', 
         global defect_char
         global over
         
+        det_param[0] = w_slider.val
+        det_param[1] = R_slider.val
+        det_param[2] = Thresh_slider.val
         if endsave:
             print('Where to save the data?')
             fold = filedialog.asksaveasfile(defaultextension='.csv') # the user choses a place in file explorer
@@ -579,7 +586,7 @@ def defect_analyzer(imgpath, w, R, stack=True, frame=0, um_per_px=1, unit='px', 
     # while plt.fignum_exists(fig.number):
     #     plt.pause(0.1)
         
-    return defect_char, w_slider.val, R_slider.val, Thresh_slider.val, vfield, [OKbutton, Savebutton, Circlebutton, Fieldbutton, button, reversebutton]
+    return defect_char, det_param, vfield, [OKbutton, Savebutton, Circlebutton, Fieldbutton, button, reversebutton]
 
 
 
@@ -1125,6 +1132,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     global stack
     global img
     global track_param    
+    global det_param
     vfield = None
     
     defect_char = pd.DataFrame()
@@ -1296,12 +1304,15 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         global defect_char
         global track_param
         nonlocal vfield
+        global det_param
         if (filename is None) and (vfield is None):
             print('Load an image first!')
         else:
-            defect_char, det_param[0], det_param[1], det_param[2], field, ref = defect_analyzer(filename, det_param[0], det_param[1], stack=stack, frame=frame_slider.val, um_per_px=unit_per_px, unit=unit, vfield=vfield, endsave=False)
+            defect_char, det_param, field, ref = defect_analyzer(filename, det_param, stack=stack, frame=frame_slider.val, um_per_px=unit_per_px, unit=unit, vfield=vfield, endsave=False)
             vfield = field
             keep[0] = ref
+        print(det_param)
+        
             
     def check_track(event):
         global defect_char
@@ -1336,7 +1347,9 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     
     
     def on_directory(event):
+        global det_param
         print('Apply the analysis with chosen parameters on a directory. Chose it!')
+        print(det_param)
         folder = filedialog.askdirectory()
         bin_ = round(det_param[0]/4)
         sigma = round(1.5*det_param[0])
