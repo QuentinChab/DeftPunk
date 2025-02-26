@@ -699,7 +699,7 @@ def defect_statistics(df, minframe=0, maxframe=np.inf, filt=0, minspace=0):
         
         
 
-def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
+def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     global quiver_artist
     global quiverM1
     global quiverM2
@@ -707,6 +707,11 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
     global traj_artist
     global loop
     global deftab
+    
+    searchR = track_param[0]
+    memory = track_param[1]
+    filt = track_param[2]
+    
     loop = False
     if imgpath[-3:]=='tif':
         img_st = tf.imread(imgpath)
@@ -906,6 +911,9 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
     is_open = True
     def finish(event):
         nonlocal is_open
+        track_param[0] = searchslider.val
+        track_param[1] = memslider.val
+        track_param[2] = filtslider.val
         is_open = False
         plt.close(fig)
         #return deftab
@@ -1006,7 +1014,7 @@ def check_tracking(imgpath, deftab_, searchR=None, memory=None, filt=0):
         fig.canvas.flush_events()
         plt.pause(0.1)
     
-    return deftab, memslider.val, searchslider.val, filtslider.val, [loopbutton, databutton, moviebutton, okbutton, startbutton]
+    return deftab, track_param, [loopbutton, databutton, moviebutton, okbutton, startbutton]
         
     
 def add_points(ax, all_data, frame, plot_cbar=False, animated=False):
@@ -1318,7 +1326,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         global defect_char
         global track_param
         if len(defect_char)>0:
-            defect_char, track_param[0], track_param[1], track_param[2], ref = check_tracking(filename, defect_char, searchR=track_param[1], memory=track_param[0], filt=track_param[2])
+            defect_char, track_param, ref = check_tracking(filename, defect_char, track_param=track_param)#searchR=track_param[1], memory=track_param[0], filt=track_param[2])
             #print(track_param)
             keep[0] = ref
             #track_param = [track_param_0, track_param_0,track_param_0]
@@ -1518,39 +1526,67 @@ def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, t
     b = max(10, int(min(*s)/8)) # we want at least 8 points per box but at least 10 boxes
     # Density map at frame_th frame
     # X, Y = np.mgrid[r[0][0]:r[0][1]:b*1j, r[1][0]:r[1][1]:b*1j]
-    x_grid = np.linspace(r[0][0], r[0][1], b)
-    y_grid = np.linspace(r[1][0], r[1][1], b)
-    X, Y = np.meshgrid(x_grid, y_grid)
-    dx = s[1] / (b - 1)  # pixel width
-    dy = s[0] / (b - 1)  # pixel height
-    positions = np.vstack([X.ravel(), Y.ravel()])
-    values = np.vstack([subset['x'], subset['y']])
-    kernel = stats.gaussian_kde(values)
-    density = np.reshape(kernel(positions).T, X.shape)/dx/dy
-    Z = density * len(subset) / area / density.mean()
-    plt.imshow(Z, cmap=plt.cm.gist_earth_r, extent=[*r[1], *r[0]], origin='lower')
+    if len(subset)>0:
+        x_grid = np.linspace(r[0][0], r[0][1], b)
+        y_grid = np.linspace(r[1][0], r[1][1], b)
+        X, Y = np.meshgrid(x_grid, y_grid)
+        dx = s[1] / (b - 1)  # pixel width
+        dy = s[0] / (b - 1)  # pixel height
+        positions = np.vstack([X.ravel(), Y.ravel()])
+        values = np.vstack([subset['x'], subset['y']])
+        kernel = stats.gaussian_kde(values)
+        density = np.reshape(kernel(positions).T, X.shape)/dx/dy
+        Z = density * len(subset) / area / density.mean()
+        plt.imshow(Z, cmap=plt.cm.gist_earth_r, extent=[*r[0], *r[1]], origin='lower')
     # plt.hist2d(subset['x'], subset['y'], bins=b, weights=np.ones(len(subset))*1/b/unit_per_px, range=r, cmap='Reds') #weights ensures unit consistency
     plt.plot(subset['x'], subset['y'], 'k.')
     plt.gca().invert_yaxis()
     plt.colorbar(label='Defect density [1/'+unit+'$^2$]')
     if stack:
         add_to_title = 'At t=%.0f'%(frame*t_per_frame)+tunit+'\n'
-        fdf.suptitle(add_to_title + 'Average density: $%.1e\\pm%.1e$ 1/'%(np.mean(N/area), np.std(N/area)) + unit + '$^2$\n For +1/2: $%.1e\\pm%.1e$ 1/'%(np.mean(Nplus/area), np.std(Nplus/area)) + unit  + '$^2$\n For -1/2: $%.1e\\pm%.1e$ 1/'%(np.mean(Nminus/area), np.std(Nminus/area)) + unit + '$^2$')
+        fdf.suptitle(add_to_title + 'Average density: $%.1e\\pm %.1e$ 1/'%(np.mean(N/area), np.std(N/area)) + unit + '$^2$\n For +1/2: $%.1e\\pm %.1e$ 1/'%(np.mean(Nplush/area), np.std(Nplush/area)) + unit  + '$^2$\n For -1/2: $%.1e\\pm%.1e$ 1/'%(np.mean(Nminush/area), np.std(Nminush/area)) + unit + '$^2$')
     else:
         N = len(subset)
-        Nplus = np.sum(subset['charge']==0.5)
-        Nminus = np.sum(subset['charge']==-0.5)
-        fdf.suptitle('Defect density: %.1e 1/'%(N/area) + unit + '$^2$\n For +1/2: %.1e 1/'%(Nplus/area) + unit  + '$^2$\n For -1/2: %.1e 1/'%(np.mean(Nminus/area)) + unit + '$^2$')
+        Nplush = np.sum(subset['charge']==0.5)
+        Nminush = np.sum(subset['charge']==-0.5)
+        fdf.suptitle('Defect density: %.1e 1/'%(N/area) + unit + '$^2$\n For +1/2: %.1e 1/'%(Nplush/area) + unit  + '$^2$\n For -1/2: %.1e 1/'%(np.mean(Nminush/area)) + unit + '$^2$')
     plt.tight_layout()
     fset.append(fdf)
     
+    
+    
     fh = plt.figure()
     plt.hist(dataset['Anisotropy'], bins=20)
+    plt.title('Average: $%.2f\\pm%.2f$'%(np.nanmean(dataset['Anisotropy']), np.nanstd(dataset['Anisotropy'])))
     plt.xlim([-1,1])
     plt.xlabel('Anisotropy')
     plt.ylabel('Counts')
     plt.tight_layout()
     fset.append(fh)
+    
+    fdist = plt.figure()
+    plt.hist(dataset['MinDist']*unit_per_px, bins=20)
+    plt.xlabel('Disatnce to nearest neighbor ['+unit+']')
+    plt.ylabel('Counts')
+    plt.title('Average: $%.2e\\pm%.2e$'%(np.nanmean(dataset['MinDist'])*unit_per_px, np.nanstd(dataset['MinDist'])*unit_per_px))
+    plt.tight_layout()
+    fset.append(fdist)
+    
+    if stack:
+        color = dataset['frame']*t_per_frame#frame dependant 
+    else:
+        color = 1
+    fdiste = plt.figure()
+    plt.scatter(dataset['MinDist']*unit_per_px, dataset['Anisotropy'], marker='.', c=color, cmap=plt.cm.Wistia)
+    if stack:
+        plt.colorbar(label='Time ['+tunit+']')
+    plt.plot(plt.xlim(), [0,0], 'k--')
+    plt.ylim([-1, 1])
+    plt.xlabel('Distance to nearest neighbor ['+unit+']')
+    plt.ylabel('Anisotropy')
+    plt.tight_layout()
+    fset.append(fdiste)
+    
     
     return fset
         
@@ -1561,12 +1597,24 @@ def defect_pattern(field, dataset, cropsize = 100):
     patterns_p = np.empty((len(pset), cropsize*2, cropsize*2))
     patterns_m = np.empty((len(mset), cropsize*2, cropsize*2))
     
-    for ip in range(len(pset)):
-        xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-pset['axis'].iloc[ip], cropsize=cropsize, xcenter=pset['x'].iloc[ip], ycenter=pset['y'].iloc[ip])
-        patterns_p[ip] = rot_field
-    for im in range(len(mset)):
-        xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-mset['axis'].iloc[im], cropsize=cropsize, xcenter=mset['x'].iloc[im], ycenter=mset['y'].iloc[im])
-        patterns_m[im] = rot_field
+    if 'particle' in dataset.columns:
+        part = np.unique(dataset['particle'])
+        for i in range(len(part)):
+            pset = pset[pset['particle']==part[i]]
+            mset = mset[mset['particle']==part[i]]
+            for ip in range(len(pset)):
+                xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field[i], axis=-pset['axis'].iloc[ip], cropsize=cropsize, xcenter=pset['x'].iloc[ip], ycenter=pset['y'].iloc[ip])
+                patterns_p[ip] = rot_field
+            for im in range(len(mset)):
+                xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field[i], axis=-mset['axis'].iloc[im], cropsize=cropsize, xcenter=mset['x'].iloc[im], ycenter=mset['y'].iloc[im])
+                patterns_m[im] = rot_field
+    else:
+        for ip in range(len(pset)):
+            xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-pset['axis'].iloc[ip], cropsize=cropsize, xcenter=pset['x'].iloc[ip], ycenter=pset['y'].iloc[ip])
+            patterns_p[ip] = rot_field
+        for im in range(len(mset)):
+            xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-mset['axis'].iloc[im], cropsize=cropsize, xcenter=mset['x'].iloc[im], ycenter=mset['y'].iloc[im])
+            patterns_m[im] = rot_field
     
     return np.nanmean(patterns_p, axis=0), np.nanmean(patterns_m, axis=0)
 

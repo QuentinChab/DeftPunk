@@ -498,7 +498,7 @@ def motility_analysis(dataset, dt=1, unit_per_frame=1, unit_t = 'frame', unit_pe
     plt.xlabel('Time delay $\\tau$ ['+unit_t+']')
     plt.ylabel('RMS Displacement ['+unit_space+']')
     plt.legend()
-    plt.title('The diffusion coefficient is $D=%.3f\\pm%.3f$\n The diffusion exponent is $\\alpha=%.3f\\pm%.3f$'%(D, D_err, alpha, alpha_err))
+    plt.title('The diffusion coefficient is $D=%.3f\\pm %.3f$\n The diffusion exponent is $\\alpha=%.3f\\pm %.3f$'%(D, D_err, alpha, alpha_err))
     plt.tight_layout()
     
     
