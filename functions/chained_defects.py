@@ -1595,7 +1595,14 @@ def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, t
     plt.tight_layout()
     fset.append(fdf)
     
-    
+    fdhist = plt.figure()
+    plt.hist(N/area, bins=20)
+    plt.title('Average density: $%.1e\\pm %.1e$ 1/'%(np.mean(N/area), np.std(N/area))+unit+'$^2$')
+    plt.xlabel('Defect density [1/'+unit+'$^2$')
+    plt.xlim([-1,1])
+    plt.ylabel('Counts')
+    plt.tight_layout()
+    fset.append(fdhist)
     
     fh = plt.figure()
     plt.hist(dataset['Anisotropy'], bins=20)
