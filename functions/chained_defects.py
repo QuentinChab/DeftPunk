@@ -1091,9 +1091,9 @@ def add_points(ax, all_data, frame, plot_cbar=False, animated=False):
     
     trajs = np.unique(all_data['particle'])
     for i in range(len(trajs)):
-        indices = all_data['frame']==trajs[i]
-        artists_vec[incr] = plt.plot(all_data['x'][indices], all_data['y'][indices])
-        incr+=1
+        if not np.isnan(trajs[i]):
+            indices = all_data['particle']==trajs[i]
+            artists_vec[incr] = plt.plot(all_data['x'][indices], all_data['y'][indices], color='C%.0f'%(trajs[i]%10))
         
     # set back to old display range
     new_xlim = ax.get_xlim()
@@ -1270,6 +1270,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                         unit_maybe = tif.imagej_metadata['unit']
                         if unit_maybe!='':
                             unit=unit_maybe
+                            unitBox.set_val(unit)
                     except:
                         opla = 78
                         
@@ -1277,12 +1278,15 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                         unitt = tif.imagej_metadata['time unit']
                         unit_t = unitt
                         unit_per_frame = tif.imagej_metadata['finterval']
+                        unittBox.set_val(unit_t)
+                        fpsBox.set_val(unit_per_frame)
                     except:
                         unitt=1 # blank statement for the required except keyword
                 xres = tif.pages[0].tags.get('XResolution')
                 if xres:
                     xres = xres.value
                     unit_per_px = xres[0]/xres[1]
+                    uppxBox.set_val(unit_per_px)
                     
         elif fname[-3:]=='csv':
             defect_char = pd.read_csv(fname)
@@ -1317,7 +1321,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
             print('Load an image first!')
         else:
             defect_char, det_param, field, ref = defect_analyzer(filename, det_param, stack=stack, frame=frame_slider.val, um_per_px=unit_per_px, unit=unit, vfield=vfield, endsave=False)
-            vfield = field
+            #vfield = field
             keep[0] = ref
         print(det_param)
         
@@ -1367,7 +1371,45 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                 e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = can.get_anisotropy(folder+os.sep+filename, False, det_param[1]/bin_, sigma, bin_, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
                 
                 defect_table.to_csv(folder+os.sep+'data_'+filename[:-3]+'csv')
-    
+                
+                
+                plt.figure()
+                fig, ax = plt.subplots()
+                if filename.endswith('tif'):
+                    imgtmp = tf.imread(folder+os.sep+filename)
+                else:
+                    imgtmp = plt.imread(folder+os.sep+filename)
+                if stack:
+                    # re arrange the trajectory list
+                    defect_table.sort_values(by='frame')
+                    order_traj = np.zeros(len(defect_table))
+                    curr_part = defect_table['particle'].to_numpy()
+                    old_list = np.unique(curr_part)
+                    new_list = np.arange(len(old_list))                    
+                    for i in range(len(old_list)):
+                        storing_places = curr_part == old_list[i]
+                        order_traj[storing_places] = new_list[i]
+                    
+                    imglist = []
+                    for i in range(len(imgtmp)):
+                        ax.imshow(imgtmp[i], cmap='gray')
+                        add_points(ax, defect_table, i, plot_cbar=(not i))
+                        fig.canvas.draw()
+                        imgarray = np.copy(np.array(fig.canvas.renderer.buffer_rgba())[..., :3])
+                        imglist.append(imgarray)
+                        ax.clear()
+                        # plt.close(fig)
+                    tf.imwrite(folder+os.sep+'Traj_'+filename, np.stack(imglist, axis=0), photometric='rgb')
+                    plt.close(fig)
+                else:
+                    plt.imshow(imgtmp, cmap='gray')
+                    add_points(ax, defect_table, 0, plot_cbar=True)
+                    fig.canvas.draw()
+                    imgarray = np.array(fig.canvas.renderer.buffer_rgba())[..., :3]
+                    plt.close(fig)
+                    tf.imwrite(folder+os.sep+'Traj_'+filename, imgarray, photometric='rgb')
+        print('Folder fully analyzed')
+        
     def stat_func(event):
         global defect_char
         global img
