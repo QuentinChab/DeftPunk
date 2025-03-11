@@ -1477,7 +1477,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     #     plt.pause(0.1)
     return [loadbutton, trackbutton, savebutton, detbutton, dirbutton, unitBox, uppxBox, unittBox, fpsBox, statbutton, keep]
 
-def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, tunit='frame', t_per_frame=1):
+def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, tunit='frame', t_per_frame=1, min_dist=0):
     fset = []
     
     if img is None:
@@ -1508,8 +1508,9 @@ def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, t
             Nplus[i] = np.sum(np.abs(subset['charge']-1)<0.25)
             Nminus[i] = np.sum(np.abs(subset['charge']+1)<0.25)
             N[i] = len(subset)
-            e_mean[i] = np.nanmean(subset['Anisotropy'])
-            e_std[i] = np.nanstd(subset['Anisotropy'])
+            subsubset = subset[subset['MinDist']<min_dist]
+            e_mean[i] = np.nanmean(subsubset['Anisotropy'])
+            e_std[i] = np.nanstd(subsubset['Anisotropy'])
         No = N - Nminus - Nminush - Nplush - Nplus
         
         # Density of defect over time
@@ -1598,15 +1599,15 @@ def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, t
     fdhist = plt.figure()
     plt.hist(N/area, bins=20)
     plt.title('Average density: $%.1e\\pm %.1e$ 1/'%(np.mean(N/area), np.std(N/area))+unit+'$^2$')
-    plt.xlabel('Defect density [1/'+unit+'$^2$')
-    plt.xlim([-1,1])
+    plt.xlabel('Defect density [1/'+unit+'$^2$]')
     plt.ylabel('Counts')
     plt.tight_layout()
     fset.append(fdhist)
     
     fh = plt.figure()
-    plt.hist(dataset['Anisotropy'], bins=20)
-    plt.title('Average: $%.2f\\pm%.2f$'%(np.nanmean(dataset['Anisotropy']), np.nanstd(dataset['Anisotropy'])))
+    subset = dataset[dataset['MinDist']>min_dist]
+    plt.hist(subset['Anisotropy'], bins=20)
+    plt.title('Average: $%.2f\\pm%.2f$'%(np.nanmean(subset['Anisotropy']), np.nanstd(subset['Anisotropy'])))
     plt.xlim([-1,1])
     plt.xlabel('Anisotropy')
     plt.ylabel('Counts')
@@ -1615,8 +1616,10 @@ def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, t
     
     fdist = plt.figure()
     plt.hist(dataset['MinDist']*unit_per_px, bins=20)
+    plt.plot([min_dist*unit_per_px, min_dist*unit_per_px], plt.ylim(), 'k--', label='Cut-off distance')
     plt.xlabel('Disatnce to nearest neighbor ['+unit+']')
     plt.ylabel('Counts')
+    plt.legend()
     plt.title('Average: $%.2e\\pm%.2e$'%(np.nanmean(dataset['MinDist'])*unit_per_px, np.nanstd(dataset['MinDist'])*unit_per_px))
     plt.tight_layout()
     fset.append(fdist)
@@ -1630,6 +1633,7 @@ def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, t
     if stack:
         plt.colorbar(label='Time ['+tunit+']')
     plt.plot(plt.xlim(), [0,0], 'k--')
+    plt.plot([min_dist*unit_per_px, min_dist*unit_per_px], [-1,1], 'k:', label='Cut-off distance')
     plt.ylim([-1, 1])
     plt.xlabel('Distance to nearest neighbor ['+unit+']')
     plt.ylabel('Anisotropy')

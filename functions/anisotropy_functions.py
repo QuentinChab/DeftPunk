@@ -414,10 +414,12 @@ def motility_analysis(dataset, dt=1, unit_per_frame=1, unit_t = 'frame', unit_pe
     dangle_flat = []
     SD_flat = []
     
+    fset = []
+    
     #polar plot histogram and trajectory schematic
     
-    f_traj = plt.figure()
-    plt.quiver(-1,0, label='Head-to-tail direction')
+    # f_traj = plt.figure()
+    # plt.quiver(-1,0, label='Head-to-tail direction')
     
     for i in range(len(part_list)):
         datapart = datap[datap['particle']==part_list[i]]
@@ -425,29 +427,31 @@ def motility_analysis(dataset, dt=1, unit_per_frame=1, unit_t = 'frame', unit_pe
         vy = np.diff(datapart['y'], dt)*unit_per_px/unit_per_frame
         axis = datapart['axis'].to_numpy()[:-dt]
         dangle = np.arccos((vx*np.cos(axis) + vy*np.sin(axis))/np.sqrt(vx**2+vy**2))
-        dangle_list[i] = dangle
+    #     dangle_list[i] = dangle
         dangle_flat = [*dangle_flat, *dangle]
         vamp = np.sqrt(vx**2 + vy**2)
         
         SD_flat = [*SD_flat, *vamp]
-        #build traj
-        xtraj = np.zeros(len(dangle)+1)
-        ytraj = np.zeros(len(dangle)+1)
-        for j in range(1,len(xtraj)):
-            xtraj[j] = (xtraj[j-1]+vamp[j-1]*np.cos(dangle[j-1]))
-            ytraj[j] = (ytraj[j-1]+vamp[j-1]*np.sin(dangle[j-1]))
-        plt.plot(xtraj, ytraj)
+    #     #build traj
+    #     xtraj = np.zeros(len(dangle)+1)
+    #     ytraj = np.zeros(len(dangle)+1)
+    #     for j in range(1,len(xtraj)):
+    #         xtraj[j] = (xtraj[j-1]+vamp[j-1]*np.cos(dangle[j-1]))
+    #         ytraj[j] = (ytraj[j-1]+vamp[j-1]*np.sin(dangle[j-1]))
+    #     plt.plot(xtraj, ytraj)
         
-    plt.xlabel('x ['+unit_space+']')
-    plt.ylabel('y ['+unit_space+']')
-    plt.legend()
-    plt.title('Defect trajectory with respect to defect axis')
-    plt.tight_layout()
+    # plt.xlabel('x ['+unit_space+']')
+    # plt.ylabel('y ['+unit_space+']')
+    # plt.legend()
+    # plt.title('Defect trajectory with respect to defect axis')
+    # plt.tight_layout()
+    # fset.append(f_traj)
     
     f_polar, ax = plt.subplots(subplot_kw={'projection': 'polar'})
     circular_hist(ax, np.array(dangle_flat), bins=16, density=True, offset=0, gaps=True)
     plt.title('Angle between defect axis and velocity \n over %.0f points.\n Frequency proportionnal to box area.'%(dt))
     plt.tight_layout()
+    fset.append(f_polar)
     
     # plot diffusion 
     
@@ -472,9 +476,12 @@ def motility_analysis(dataset, dt=1, unit_per_frame=1, unit_t = 'frame', unit_pe
     dt_list = dt_list*unit_per_frame
     err_RMSD = MSD_std/2/MSD
     err_logRMSD = err_RMSD/np.sqrt(MSD)
+    err_logRMSD[err_logRMSD==0] = np.nan
     weights = 1/np.square(err_logRMSD)
     params, cov = curve_fit(linear_model, np.log(dt_list), np.log(MSD)/2, bounds=(0,np.inf), maxfev=int(1e5))#, p0=(0.5, np.nanmean(np.log(MSD)/np.log(dt_list))))#, sigma=err_logRMSD, absolute_sigma=True, ))
     alpha, log_A = params
+    if log_A == 0:
+        log_A = np.nan
     alpha_err, log_A_err = np.sqrt(np.diag(cov))
     A = np.exp(log_A)
     A_err = A * log_A_err
@@ -500,12 +507,13 @@ def motility_analysis(dataset, dt=1, unit_per_frame=1, unit_t = 'frame', unit_pe
     plt.legend()
     plt.title('The diffusion coefficient is $D=%.3f\\pm %.3f$\n The diffusion exponent is $\\alpha=%.3f\\pm %.3f$'%(D, D_err, alpha, alpha_err))
     plt.tight_layout()
-    
+    fset.append(f_dif)
     
     f_hist = plt.figure()
     plt.hist(SD_flat, bins=20)
     plt.xlabel('Velocity amplitude ['+unit_space+'/'+unit_t+']')
     plt.ylabel('Counts')
     plt.tight_layout()
+    fset.append(f_hist)
     
-    return [f_traj, f_polar, f_dif, f_hist]
+    return fset
