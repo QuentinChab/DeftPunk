@@ -707,6 +707,7 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     global traj_artist
     global loop
     global deftab
+    global deftab_raw
     
     searchR = track_param[0]
     memory = track_param[1]
@@ -962,35 +963,42 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     
     def change_tracking(val):
         global deftab
+        global deftab_raw
         tp.quiet()
         
         #### Perform 3 tracking, for -1/2, +1/2 and others -> does not work
-        # ptab = deftab[deftab['charge']==0.5]
-        # mtab = deftab[deftab['charge']==-0.5]
-        # otab = deftab[np.abs(deftab['charge'])!=0.5]
+        ptab = deftab_raw[deftab_raw['charge']==0.5]
+        mtab = deftab_raw[deftab_raw['charge']==-0.5]
+        otab = deftab_raw[np.abs(deftab_raw['charge'])!=0.5]
         
-        # if len(ptab)>0:
-        #     ptab = tp.link(ptab, search_range=searchslider.val, memory=memslider.val)
-        # if len(mtab)>0:
-        #     mtab = tp.link(mtab, search_range=searchslider.val, memory=memslider.val)
-        # if len(otab)>0:
-        #     otab = tp.link(otab, search_range=searchslider.val, memory=memslider.val)
+        if len(ptab)>0:
+            ptab = tp.link(ptab, search_range=searchslider.val, memory=memslider.val)
+        if len(mtab)>0:
+            mtab = tp.link(mtab, search_range=searchslider.val, memory=memslider.val)
+        if len(otab)>0:
+            otab = tp.link(otab, search_range=searchslider.val, memory=memslider.val)
+
+        deftab_raw = pd.concat([ptab, mtab, otab])
         
         # # prevent the particle number to be redundant
-        # ppart = ptab['particle'].to_numpy()
-        # mpart = mtab['particle'].to_numpy()
-        # opart = otab['particle'].to_numpy()
+        ppart = ptab['particle'].to_numpy()
+        mpart = mtab['particle'].to_numpy()
+        opart = otab['particle'].to_numpy()
         
+        # print(ppart)
+        # print(mpart)
         #deftab['particle'] = [*ptab['particle'].to_numpy(), *mtab['particle'].to_numpy(), *otab['particle'].to_numpy()]
 
         
-        # mpart = mpart + ppart.max() + 1
-        # opart = opart + mpart.max() + 1
-        # deftab['particle'] = [*ppart, *mpart, *opart]
+        mpart = mpart + np.max(ppart) + 1
+        opart = opart + np.max(mpart) + 1
+        
+        
+        deftab_raw['particle'] = [*ppart, *mpart, *opart]
         
         #### Trak defects irrespective of their charge. We can have mixed trajectories
-        tempdf = tp.link(deftab_raw, search_range=searchslider.val, memory=memslider.val)
-        deftab_raw['particle'] = tempdf['particle']
+        #tempdf = tp.link(deftab_raw, search_range=searchslider.val, memory=memslider.val)
+        #deftab_raw['particle'] = tempdf['particle']
         if filtslider.val:
             deftab_temp = tp.filter_stubs(deftab_raw, filtslider.val)
             deftab = deftab_temp
@@ -1004,6 +1012,7 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         # else:
         #     deftab.drop(np.arange(len(deftab_temp),len(deftab)))
         #     deftab.iloc[:,:] = deftab_temp.iloc[:,:]
+        
     searchslider.on_changed(change_tracking)
     memslider.on_changed(change_tracking)
     filtslider.on_changed(change_tracking)
