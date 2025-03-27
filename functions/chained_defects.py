@@ -1199,7 +1199,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                 xres = tif.pages[0].tags.get('XResolution')
                 if xres:
                     xres = xres.value
-                    unit_per_px = xres[0]/xres[1]
+                    unit_per_px = xres[1]/xres[0]
                 
         else:
             img = plt.imread(filename)
@@ -1294,7 +1294,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                 xres = tif.pages[0].tags.get('XResolution')
                 if xres:
                     xres = xres.value
-                    unit_per_px = xres[0]/xres[1]
+                    unit_per_px = xres[1]/xres[0]
                     uppxBox.set_val(unit_per_px)
                     
         elif fname[-3:]=='csv':
@@ -1382,7 +1382,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                 defect_table.to_csv(folder+os.sep+'data_'+filename[:-3]+'csv')
                 
                 
-                plt.figure()
+                #plt.figure()
                 fig, ax = plt.subplots()
                 if filename.endswith('tif'):
                     imgtmp = tf.imread(folder+os.sep+filename)

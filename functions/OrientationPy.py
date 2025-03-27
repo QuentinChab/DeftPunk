@@ -40,6 +40,9 @@ def orientation_analysis(img, sigma, binning, plotf=False):
     - coherence
     - energy
     
+    call
+    orientation, coherence, ene, X, Y = orientation_analysis(img, sigma, binning, plotf=False)
+    
     To display:
     plt.figure()
     plt.imshow(img) #to have the image. If you just want the vector field write plt.invert_yaxis() instead
