@@ -457,18 +457,27 @@ def motility_analysis(dataset, dt=1, unit_per_frame=1, unit_t = 'frame', unit_pe
     
     Npart = [ np.sum(part_vec==part) for part in part_list]
     dt_list = np.arange(1, np.max(Npart))
-    MSD = np.empty(len(dt_list))
-    MSD_std = np.empty(len(dt_list))
+    MSD = np.empty((len(part_list), len(dt_list)))
+    MSD_std = np.empty((len(part_list), len(dt_list)))
     for it in range(len(dt_list)):
         SD_list = []
         for ip in range(len(part_list)):
             datapart = datap[datap['particle']==part_list[ip]]
+            x = datapart['x'].to_numpy()
+            y = datapart['y'].to_numpy()
+            fr = datapart['frame'].to_numpy()
+            sdt = []
+            for j in range(len(fr)):
+                sel = fr-fr[j]==dt_list[it]
+                if np.any(sel):
+                    ind = np.where(sel)[0][0]
+                    sdt.append((x[ind]-x[j])**2+(y[ind]-y[j])**2)
             vx = np.diff(datapart['x'], dt_list[it])*unit_per_px/unit_per_frame
             vy = np.diff(datapart['y'], dt_list[it])*unit_per_px/unit_per_frame
             SD = np.square(vx) + np.square(vy)
             SD_list = [*SD_list, *SD]
-        MSD[it] = np.nanmean(SD_list)
-        MSD_std[it] = np.nanstd(SD_list)
+            MSD[ip,it] = np.nanmean(sdt)*unit_per_frame*unit_per_frame
+            MSD_std[ip,it] = np.nanstd(sdt)*unit_per_frame*unit_per_frame
     
     def linear_model(log_t, alpha, log_A):
         return log_A + log_t*alpha
@@ -478,15 +487,33 @@ def motility_analysis(dataset, dt=1, unit_per_frame=1, unit_t = 'frame', unit_pe
     err_logRMSD = err_RMSD/np.sqrt(MSD)
     err_logRMSD[err_logRMSD==0] = np.nan
     weights = 1/np.square(err_logRMSD)
-    params, cov = curve_fit(linear_model, np.log(dt_list), np.log(MSD)/2, bounds=(0,np.inf), maxfev=int(1e5))#, p0=(0.5, np.nanmean(np.log(MSD)/np.log(dt_list))))#, sigma=err_logRMSD, absolute_sigma=True, ))
-    alpha, log_A = params
-    if log_A == 0:
-        log_A = np.nan
-    alpha_err, log_A_err = np.sqrt(np.diag(cov))
-    A = np.exp(log_A)
-    A_err = A * log_A_err
-    D = A**2 / 4
-    D_err = 2*A*A_err/4
+    alphas = np.empty(len(part_list))*np.nan
+    bs = np.empty(len(part_list))*np.nan
+    ralphas = np.empty(len(part_list))*np.nan
+    rbs = np.empty(len(part_list))*np.nan
+    for j in range(len(part_list)):
+        # print(np.any(np.isnan(np.log(dt_list[3:-3]))))
+        # print(np.all(np.isnan(np.log(MSD[3:-3])/2)))
+        sel2 = np.logical_not(np.isnan(MSD[j,3:-3]))
+        params, cov = curve_fit(linear_model, np.log(dt_list[3:-3][sel2]), np.log(MSD[j,3:-3][sel2])/2, bounds=(0,np.inf), maxfev=int(1e5))#, p0=(0.5, np.nanmean(np.log(MSD)/np.log(dt_list))))#, sigma=err_logRMSD, absolute_sigma=True, ))
+        cerr = np.sqrt(np.diag(cov))
+        alphas[j] = params[0]
+        if params[1]==0:
+            params[1] = np.nan
+        bs[j] = np.exp(params[1])
+        ralphas[j] = cerr[0]
+        rbs[j] = cerr[1]*bs[j]
+    # alpha, log_A = params
+    # if log_A == 0:
+    #     log_A = np.nan
+    # alpha_err, log_A_err = np.sqrt(np.diag(cov))
+    # A = np.exp(log_A)
+    # A_err = A * log_A_err
+    # D = A**2 / 4
+    # D_err = 2*A*A_err/4
+    
+    D = bs**2 / 4
+    D_err = 2*bs*rbs/4
     
     # params, cov = curve_fit(linear_model, dt_list, np.sqrt(MSD), maxfev=int(1e4), p0=(0.5, np.nanmean(np.sqrt(MSD/dt_list))))#, sigma=err_RMSD, absolute_sigma=True)
     # alpha, A= params
@@ -494,20 +521,33 @@ def motility_analysis(dataset, dt=1, unit_per_frame=1, unit_t = 'frame', unit_pe
     # D = A**2/4
     # D_err = 2*A*A_err/4
     
-    fitted_RMSD = A * dt_list**alpha
+    # fitted_RMSD = A * dt_list**alpha
+    # fitted_RMSD = bs * dt_list**alphas
     
     f_dif = plt.figure()
-    plt.plot(dt_list, np.sqrt(MSD), '+', label='Data')
-    plt.fill_between(dt_list, np.sqrt(MSD)-np.sqrt(MSD_std), np.sqrt(MSD)+np.sqrt(MSD_std), alpha=0.5, color=plt.gca().lines[-1].get_color())
-    plt.plot(dt_list, fitted_RMSD, label='Fit: RMSD = %.3f$\\cdot\\tau^{%.3f}$'%(A, alpha))
+    for ip in range(len(part_list)):
+        plt.plot(dt_list, MSD[ip,:], '.')
+        plt.plot(dt_list, bs[ip]*dt_list**alphas[ip], '--')    
+    plt.plot([], [], 'k.', label='Data')
+    plt.plot([], [], 'k--', label='Fit')
+    # plt.plot(dt_list, np.sqrt(MSD), '+', label='Data')
+    # plt.fill_between(dt_list, np.sqrt(MSD)-np.sqrt(MSD_std), np.sqrt(MSD)+np.sqrt(MSD_std), alpha=0.5, color=plt.gca().lines[-1].get_color())
+    # plt.plot(dt_list, fitted_RMSD, label='Fit: RMSD = %.3f$\\cdot\\tau^{%.3f}$'%(A, alpha))
     plt.yscale('log')
     plt.xscale('log')
     plt.xlabel('Time delay $\\tau$ ['+unit_t+']')
-    plt.ylabel('RMS Displacement ['+unit_space+']')
+    plt.ylabel('MS Displacement ['+unit_space+']')
     plt.legend()
-    plt.title('The diffusion coefficient is $D=%.3f\\pm %.3f$\n The diffusion exponent is $\\alpha=%.3f\\pm %.3f$'%(D, D_err, alpha, alpha_err))
+    #plt.title('The diffusion coefficient is $D=%.3f\\pm %.3f$\n The diffusion exponent is $\\alpha=%.3f\\pm %.3f$'%(D, D_err, alpha, alpha_err))
     plt.tight_layout()
     fset.append(f_dif)
+    
+    f_D = plt.figure()
+    plt.hist(D)
+    plt.xlabel('Diffusion coefficient ['+unit_space+'$^2$/'+unit_t+']')
+    plt.ylabel('Counts')
+    plt.tight_layout()
+    fset.append(f_D)
     
     f_hist = plt.figure()
     plt.hist(SD_flat, bins=20)
