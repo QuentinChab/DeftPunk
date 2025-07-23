@@ -20,15 +20,22 @@ Please be patient with the sliders, computations can take a few seconds
 import os
 
 ######## Fill this section #########
+####################################
+
 # Where are you storing the folder?
-function_directory = '.'+os.sep
+function_directory = os.getcwd() # current active folder
+
 # path to the image to analyze
-# path = r'C:\Users\Quentin\Documents\Experiments\zebra_skin_data\previous\zebra_skin.tif'
-# path = function_directory+'20240215_Actin_Only_8_tif.tif'
-path = r'C:\Users\Quentin\Documents\Experiments\Sanchez_kinesin\MT_kinesin_blue_cropped.tif'
+path = function_directory+os.sep+'20240215_Actin_Only_8_tif.tif'
 
 # Say wether the image is a stack
-stack = True
+stack = False
+
+
+###################################
+###################################
+
+
 
 # Initial detection parameters. Their can be modified when function is executed
 
@@ -43,19 +50,20 @@ feature_in = 32
 Rdet_in = 30
 frame = 15
 
+det_param = [feature_in, Rdet_in, 0.5]
 
 
 ######## Import necessary packages ########
 import numpy as np
 import sys
-sys.path.append(function_directory+'functions'+os.sep)
+sys.path.append(function_directory+os.sep+'functions'+os.sep)
 from chained_defects import defect_analyzer # import our function
 
 
 
 
 ######### Call the function #########
-def_tab, f_out, R_out, order_out = defect_analyzer(path, feature_in, Rdet_in, stack=stack, frame=frame)
+def_tab, f_out, R_out, order_out = defect_analyzer(path, det_param, stack=stack, frame=frame)
 
 print('You chose a feature size of %.0f px, a threshold for order parameter of %.2f and a detection radius of %.0f px'%(f_out, order_out, R_out))
 print('There is a total of %.0f +1/2 defects and %.0f -1/2 defects.'%(np.sum(def_tab['charge']==1/2), np.sum(def_tab['charge']==-1/2)))

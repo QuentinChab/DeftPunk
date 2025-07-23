@@ -18,6 +18,7 @@ import tifffile as tf
 from matplotlib import cm
 import matplotlib.patheffects as pe
 from matplotlib.colors import Normalize
+from tkinter import Tk; root = Tk()
 from tkinter import filedialog
 import trackpy as tp
 from matplotlib.animation import ArtistAnimation, FuncAnimation, FFMpegWriter
@@ -30,7 +31,7 @@ origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 bin_factor = 4
 
-def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='px', vfield=None, endsave=True):
+def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='px', vfield=None, endsave=True, savedir='Select'):
     """Calls the interface to analyze defect and their anisotropy on an image
        
     The exact choice of detection parameter is described at the end.
@@ -39,14 +40,19 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
        ----------
        imgpath : str
            path to the image to analyze.
-       w : int or float
-           feature size in pixel on which most of detection parameters are chained to.
-           As an example, the window size for vector field computation is sigma=1.5*w
-           The other relations are described at the end.
-       R : int or float
-           Radius of detection. Around a defect a contour is taken at distance R
-           and the director field is taken on this contour. This is used to 
-           compute defect anisotropy.
+       det_param : array size 3
+           with in order
+           - w : int or float
+               feature size in pixel on which most of detection parameters are chained to.
+               As an example, the window size for vector field computation is sigma=1.5*w
+               The other relations are described at the end.
+           - R : int or float
+               Radius of detection. Around a defect a contour is taken at distance R
+               and the director field is taken on this contour. This is used to 
+               compute defect anisotropy.
+           - order_threshold : float between 0 and 1
+               If there is a region with nematic order parameter inferior to 
+               order_threshold, we consider that a defect is present
        stack : bool, optional
            If the image is a stack or not.
            Default is True
@@ -497,9 +503,17 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         det_param[0] = w_slider.val
         det_param[1] = R_slider.val
         det_param[2] = Thresh_slider.val
+        
+        class Placeholder: # just to be able to use fold.name line in every case
+            def __init__(self, n):
+                self.name = n
+        
         if endsave:
-            print('Where to save the data?')
-            fold = filedialog.asksaveasfile(defaultextension='.csv') # the user choses a place in file explorer
+            if savedir=='Select':
+                print('Where to save the data?')
+                fold = filedialog.asksaveasfile(defaultextension='.csv') # the user choses a place in file explorer
+            else:
+                fold = Placeholder(savedir)
         
         sigma = round(1.5*w_slider.val) #integration size for orientation field
         bin_ = round(w_slider.val/bin_factor) # Sampling size for orientation field
