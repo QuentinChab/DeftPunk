@@ -6,7 +6,7 @@
 //////////
 
 This set of functions allow to extract from an image
-- the vector field
+- the neatic vector field
 - the position, charge and orientation of topological defects
 - the splay-bend anisotropy e=(k1-k3)/(k1+k3) associated to each defect
 - includes a little interface to tune the detection parameter, see the example.
@@ -18,8 +18,8 @@ Take a look at the example (Example.ipy)!
 Now we describe:
 1. Required Packages
 2. Desciption of the main function, inputs and outputs
-3. Desciption of the interface functions
-
+3. Desciption of the defect-deection interface functions
+4. Description of the global interface
 
 ////Required Packages////
 
@@ -40,38 +40,58 @@ or
 
 ////Description////
 
-The main function to call is defect_analyzer in the script chained_defects.
+The main function to call is defect_analyzer in the script chained_defects.py.
 It takes an image and detection parameters, compute the vector field, find the defects and compute their anisotropy.
 It displays an interface that allows to check and modify the parameters before validating the whole computation.
 It is called by typing:
 >from chained_defects import defect_analyzer
->defect_tab, f_out, R_out, order_out = defect_analyzer(imgpath, f_in, R_in, stack=True)
+>defect_tab, detection_param_out = defect_analyzer(imgpath, detection_param_in, stack=True)
 
 
 INPUTS
 imgpath: path to the image to analyze
-f_in: typical size (in px) of a characteristic feature for orientation field computation. The vector field is computed on a window of sigma=1.5*f_in. For a cell monolayer this can be the width.
-R_in: Radius of the contour on which the anisotropy is computed. In this region, the orientation field should only be distorted by the defect.
+detection_paam_in: size 3 array with detection parameters
+	f_in: typical size (in px) of a characteristic feature for orientation field computation. The vector field is computed on a window of sigma=1.5*f_in. For a cell monolayer this can be the width.
+	R_in: Radius of the contour on which the anisotropy is computed. In this region, the orientation field should only be distorted by the defect.
+	order_threshold_in: if a region of the image has a nematic order parameter inferior to this threshold, a defect is detected on this region 
 stack: boolean. Is the image a stack?
+savedir: directory on which data is automatically saved.If 'Select' it open a browsing window
 
 OUTPUTS
 defect_tab: pandas dataframe with characteristics of the defects (charge, position, axis, anisotropy,...)
-f_out: Size of characteristic feature chosen through interface
-R_out: Size of contour radius chosen through interface
-order_out: Threshold of order parameter for the detectino of defects
+detection_parameter_out:size 3 array with
+	f_out: Size of characteristic feature chosen through interface
+	R_out: Size of contour radius chosen through interface
+	order_out: Threshold of order parameter for the detection of defects
 
 ////Interface functions////
 SLIDERS
 Radius of detection [px]: update the radius of detection in pixel. This adjusts the value of anisotropy.
-Feature size [px]: update the size of the characteristic feature in pixel. This adjusts the vector field and detectino of defects (position and orientation)
+Feature size [px]: update the size of the characteristic feature in pixel. This controls the computation of the director field and detection of defects (position and orientation)
 Threshold: Threshold of the nematic order_parameter for the detection of defect. If a region has an order smaller than the threshold, there is a defect. 
 
 BUTTONS
 R-detection: Show/Hide around the defects the radius of contour.
 Director: Show/Hide the computed director field.
 Reset: Reset the slider values to their original values.
-OK: Accept these parameter values. The figure is closed and the chosen values returned.
+OK: Accept these parameter values. The figure is closed and the chosen values returned. If the image is a stack the detection is applied to all other frames.
 Save Image: Saves the current display on a chosen folder.
 
+
+////Global Interface////
+SLIDER
+Frame: If the image is a stack, you can choose which frame you are looking to choose parameter value.
+
+WRITING FIELDS
+Space Unit: You can change the unit/px value of the image (default: 1px/px)
+Time Unit: You can change the time/frame value of the stack (default: 1frame/frame)
+
+BUTTONS
+Load: Open a browsing window to load an image or a tif stack, or a director field . If an image is open, you can also load the data of defect detection.
+Start Detection: Open the defect-detection interface with the previously openned image, at the selected frame.
+Check Tracking: Open the tracking interface.
+Save Data: saves the data in a csv table (lets you browse where you store it)
+Apply on directory: Apply the same analysis (same parameter) on selected directory. data is saved for each file under the name dat_[filenamen].csv.
+Statistics [In Deveopment]: Computes some statistics (defect density, average defect shape,...)
 
 For more details go to the ScriptDescriptions.txt or to the documentation of functions.

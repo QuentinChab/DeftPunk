@@ -18,7 +18,6 @@ import tifffile as tf
 from matplotlib import cm
 import matplotlib.patheffects as pe
 from matplotlib.colors import Normalize
-from tkinter import Tk; root = Tk()
 from tkinter import filedialog
 import trackpy as tp
 from matplotlib.animation import ArtistAnimation, FuncAnimation, FFMpegWriter
@@ -513,7 +512,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
                 print('Where to save the data?')
                 fold = filedialog.asksaveasfile(defaultextension='.csv') # the user choses a place in file explorer
             else:
-                fold = Placeholder(savedir)
+                fold = Placeholder(savedir+os.sep+'data.csv')
         
         sigma = round(1.5*w_slider.val) #integration size for orientation field
         bin_ = round(w_slider.val/bin_factor) # Sampling size for orientation field

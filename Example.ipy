@@ -28,6 +28,9 @@ function_directory = os.getcwd() # current active folder
 # path to the image to analyze
 path = function_directory+os.sep+'20240215_Actin_Only_8_tif.tif'
 
+# path to save data
+savedir = 'Select'#r'C:\Users\Quentin\Documents\Analysis\example_savedir'
+
 # Say wether the image is a stack
 stack = False
 
@@ -63,7 +66,9 @@ from chained_defects import defect_analyzer # import our function
 
 
 ######### Call the function #########
-def_tab, f_out, R_out, order_out = defect_analyzer(path, det_param, stack=stack, frame=frame)
+def_tab, det_out, _, _ = defect_analyzer(path, det_param, stack=stack, frame=frame, savedir=savedir)
+
+f_out, R_out, order_out = det_out
 
 print('You chose a feature size of %.0f px, a threshold for order parameter of %.2f and a detection radius of %.0f px'%(f_out, order_out, R_out))
 print('There is a total of %.0f +1/2 defects and %.0f -1/2 defects.'%(np.sum(def_tab['charge']==1/2), np.sum(def_tab['charge']==-1/2)))
