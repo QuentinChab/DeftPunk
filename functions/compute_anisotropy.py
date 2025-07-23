@@ -204,7 +204,6 @@ def one_defect_anisotropy(field, R=np.nan, xc=None, yc=None, axis = 0, err = 0.0
             err_e = (es[ierr2] - es[ierr1])/2
     
     if plotit:
-        th_ref = np.load(origin_file+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
         
         plt.figure()
         
@@ -219,6 +218,7 @@ def one_defect_anisotropy(field, R=np.nan, xc=None, yc=None, axis = 0, err = 0.0
         
         plt.subplot(1,2,2)
         plt.plot(phi_cycle, th_min, 'o', label='Measure')
+        th_ref = np.load(origin_file+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
         plt.plot(phi_cycle, th_ref, '--', label='Reference')
         #plt.plot(phi_cycle, phi_cycle)
         plt.xlabel('Azimuthal angle [rad]')

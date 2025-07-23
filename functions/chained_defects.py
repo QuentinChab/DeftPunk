@@ -13,6 +13,7 @@ from matplotlib.widgets import Button, Slider, CheckButtons, TextBox
 import pandas as pd
 import compute_anisotropy as can
 import anisotropy_functions as fan
+import OrientationPy as OPy
 import tifffile as tf
 from matplotlib import cm
 import matplotlib.patheffects as pe
@@ -1422,6 +1423,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     def stat_func(event):
         global defect_char
         global img
+        
         # nonlocal stack
         # nonlocal unit
         # nonlocal unit_per_px
@@ -1429,11 +1431,35 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         # nonlocal unit_per_frame
         # nonlocal vfield
         
+        f = det_param[0]
+        R = det_param[1]
+        
         stat_me(defect_char, img=img, stack=stack, frame=0, unit=unit, unit_per_px=unit_per_px, tunit=unit_t, t_per_frame=unit_per_frame)
         ppattern, mpattern = defect_pattern(img, defect_char)
+        orientation, coherence, ene, X, Y = OPy.orientation_analysis(ppattern, sigma=round(1.5*f), binning=round(f/4), plotf=False)
+        phi, theta_unit = fan.compute_angle_diagram(orientation, R)
+        e_pattern, err_e, costmin, theta_unit = can.one_defect_anisotropy(orientation, R=R)
+        
+        plt.figure()
+        plt.imshow(ppattern, cmap='binary')
+        plt.quiver(X, Y, np.cos(orientation), np.sin(orientation), angles='xy', scale=1/round(f/4), width=0.5, headaxislength=0, headlength=0, pivot='mid', color='red', units='xy')
+        sh = ppattern.shape
+        plt.plot(sh[0]/2+R*np.cos(phi), sh[1]/2+R*np.sin(phi))
+        
+        
+        e_av_profile, average_theta = average_profile(defect_char, img, f, R)
+        es, costs = fan.anisotropy_comparison(phi, average_theta)
+        e_av_profile = es[np.argmin(costs)]
+        
+        plt.figure()
+        plt.plot(phi, theta_unit, '.')
+        plt.plot(phi, average_theta, '.')
+        
+        
         plt.figure()
         plt.imshow(ppattern, cmap='gray')
-        plt.title ('Average field around +1/2 defect')
+        plt.title ('Average field around +1/2 defect\n Anisotropy = %.2f\n Anisotropy (average profile) = %.2f\n Anisotropy (average value) = %.2f'%(e_pattern, e_av_profile, np.nanmean(defect_char['Anisotropy'])))
+        plt.tight_layout()
         plt.figure()
         plt.imshow(mpattern, cmap='gray')
         plt.title ('Average field around -1/2 defect')
@@ -1576,6 +1602,8 @@ def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, t
         s = img.shape
         r = [[0, s[1]],[0, s[0]]]
     b = max(10, int(min(*s)/8)) # we want at least 8 points per box but at least 10 boxes
+    
+    
     # Density map at frame_th frame
     # X, Y = np.mgrid[r[0][0]:r[0][1]:b*1j, r[1][0]:r[1][1]:b*1j]
     if len(subset)>0:
@@ -1607,7 +1635,7 @@ def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, t
     
     fdhist = plt.figure()
     plt.hist(N/area, bins=20)
-    plt.title('Average density: $%.1e\\pm %.1e$ 1/'%(np.mean(N/area), np.std(N/area))+unit+'$^2$')
+    plt.title('Average defect density: $%.1e\\pm %.1e$ 1/'%(np.mean(N/area), np.std(N/area))+unit+'$^2$')
     plt.xlabel('Defect density [1/'+unit+'$^2$]')
     plt.ylabel('Counts')
     plt.tight_layout()
@@ -1616,7 +1644,7 @@ def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, t
     fh = plt.figure()
     subset = dataset[dataset['MinDist']>min_dist]
     plt.hist(subset['Anisotropy'], bins=20)
-    plt.title('Average: $%.2f\\pm%.2f$'%(np.nanmean(subset['Anisotropy']), np.nanstd(subset['Anisotropy'])))
+    plt.title('Average anisotropy: $%.2f\\pm%.2f$'%(np.nanmean(subset['Anisotropy']), np.nanstd(subset['Anisotropy'])))
     plt.xlim([-1,1])
     plt.xlabel('Anisotropy')
     plt.ylabel('Counts')
@@ -1636,9 +1664,9 @@ def stat_me(dataset, img=None, stack=False, frame=0, unit='px', unit_per_px=1, t
     if stack:
         color = dataset['frame']*t_per_frame#frame dependant 
     else:
-        color = 1
+        color = 'k'
     fdiste = plt.figure()
-    plt.scatter(dataset['MinDist']*unit_per_px, dataset['Anisotropy'], marker='.', c=color, cmap=plt.cm.Wistia)
+    plt.scatter(dataset['MinDist']*unit_per_px, dataset['Anisotropy'], marker='.', cmap=plt.cm.Wistia, c=color)
     if stack:
         plt.colorbar(label='Time ['+tunit+']')
     plt.plot(plt.xlim(), [0,0], 'k--')
@@ -1659,27 +1687,58 @@ def defect_pattern(field, dataset, cropsize = 100):
     patterns_p = np.empty((len(pset), cropsize*2, cropsize*2))
     patterns_m = np.empty((len(mset), cropsize*2, cropsize*2))
     
-    if 'particle' in dataset.columns:
+    pincrement = 0
+    mincrement = 0
+    if 'particle' in dataset.columns: #if it is a movie
         part = np.unique(dataset['particle'])
-        for i in range(len(part)):
-            pset = pset[pset['particle']==part[i]]
-            mset = mset[mset['particle']==part[i]]
-            for ip in range(len(pset)):
-                xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field[i], axis=-pset['axis'].iloc[ip], cropsize=cropsize, xcenter=pset['x'].iloc[ip], ycenter=pset['y'].iloc[ip])
-                patterns_p[ip] = rot_field
-            for im in range(len(mset)):
-                xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field[i], axis=-mset['axis'].iloc[im], cropsize=cropsize, xcenter=mset['x'].iloc[im], ycenter=mset['y'].iloc[im])
-                patterns_m[im] = rot_field
+        for i in range(len(field)):
+            tpset = pset[pset['frame']==i]
+            tmset = mset[mset['frame']==i]
+            for ip in range(len(tpset)):
+                xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field[i], axis=-tpset['axis'].iloc[ip], cropsize=cropsize, xcenter=tpset['x'].iloc[ip], ycenter=tpset['y'].iloc[ip])
+                patterns_p[pincrement] = rot_field
+                pincrement +=1
+                # plt.figure()
+                # plt.imshow(rot_field, cmap='binary')
+            for im in range(len(tmset)):
+                xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field[i], axis=-tmset['axis'].iloc[im], cropsize=cropsize, xcenter=tmset['x'].iloc[im], ycenter=tmset['y'].iloc[im])
+                patterns_m[mincrement] = rot_field
+                mincrement +=1
     else:
+
         for ip in range(len(pset)):
             xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-pset['axis'].iloc[ip], cropsize=cropsize, xcenter=pset['x'].iloc[ip], ycenter=pset['y'].iloc[ip])
             patterns_p[ip] = rot_field
         for im in range(len(mset)):
             xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-mset['axis'].iloc[im], cropsize=cropsize, xcenter=mset['x'].iloc[im], ycenter=mset['y'].iloc[im])
             patterns_m[im] = rot_field
+    average_p = np.nanmean(patterns_p, axis=0)
     
-    return np.nanmean(patterns_p, axis=0), np.nanmean(patterns_m, axis=0)
+    
+    # for i in range(len(patterns_p)):
+    #     plt.figure()
+    #     plt.imshow(patterns_p[i], cmap='binary')
+    
+    return average_p, np.nanmean(patterns_m, axis=0)
 
+
+def average_profile(defect_char, img, f, R):
+    table = defect_char[defect_char['charge']==0.5]
+    th_list = []
+    ref = False
+    for i in range(len(table)):
+        orientation, coherence, ene, X, Y = OPy.orientation_analysis(img[table['frame'].iloc[i]], sigma=round(1.5*f), binning=round(f/4), plotf=False)
+        # print(orientation.shape)
+        # print(X.shape)
+        # print(table['x'].iloc[i])
+        # print(table['y'].iloc[i])
+        e, err_e, costmin, theta_unit = can.one_defect_anisotropy(orientation, R=R, xc=table['x'].iloc[i]/2, yc=table['y'].iloc[i]/2, axis = table['axis'].iloc[i], plotit=ref)
+        ref = False
+        #phi, theta_unit = fan.compute_angle_diagram(orientation, R, center=(, ), axis=)
+        th_list.append(theta_unit)
+    
+    theta = np.arctan2(np.nanmean(np.sin(th_list), axis=0), np.nanmean(np.cos(th_list), axis=0))
+    return e, theta
 
 
 # %matplotlib qt
