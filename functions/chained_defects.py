@@ -18,6 +18,7 @@ import tifffile as tf
 from matplotlib import cm
 import matplotlib.patheffects as pe
 from matplotlib.colors import Normalize
+import tkinter
 from tkinter import filedialog
 import trackpy as tp
 from matplotlib.animation import ArtistAnimation, FuncAnimation, FFMpegWriter
@@ -58,7 +59,21 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
        frame : int, optional
            If the image is a stack, index of the frame displayed at the interface
            Default is 0
-           
+       um_per_px : float, optionnal
+           Conversion between between pixel and the unit provided in unit parameter.
+           Default is 1.
+       unit : str, optionnal
+           Space unit of the image.
+           Default is px
+       vfield : numpy array, optionnal
+           User-provided director field, to skip this computation.
+           If None (default) the director is computed.
+       endsave : boolean, optionnal
+           Do we save the data (defect location, charge, anisotropy,...)
+           Default is True
+       savedir : string, optionnal
+           If 'Select' (default), we ask the user to browse where to save the data.
+           Otherwise it is the path where data will be saved.
            
     Returns
        ----------
@@ -70,12 +85,19 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
            MinDist is the distance to the closest other defect from the same frame
            Particle is an identifier for defect tracking. 
        
-       w_out : float
-           Value for feature size w chosen with the slider.
-       R_out : float
-           Value for detection radius R chosen with the slider.
-       order_out : float
-           Value for order_threshold parameter chosen with the slider.
+       det_param : size-3 array of floats
+           selected detection parameters with
+           - w_out : float
+               Value for feature size w chosen with the slider.
+           - R_out : float
+               Value for detection radius R chosen with the slider.
+           - order_out : float
+               Value for order_threshold parameter chosen with the slider.
+       vfield : NxM numpy array
+           Computed director field (binned) the size is L/int(w/4) x H/int(w/4)
+           with LxH the shape of the image
+       handles : list of handles
+           list containing the references of the sliders and buttons, so they stay active
            
     Interface
        ----------
@@ -116,6 +138,10 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     #initial values
     global defect_char
     global over
+    
+    # # tkinter needs a root window, so we open it and hide it for good
+    # root = tkinter.Tk()
+    # root.withdraw()
     
     w = det_param[0]
     R = det_param[1]
@@ -714,6 +740,29 @@ def defect_statistics(df, minframe=0, maxframe=np.inf, filt=0, minspace=0):
         
 
 def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
+    """
+    From defect data (location, ...), perform defect tracking with parameter tuning.
+
+    Parameters
+    ----------
+    imgpath : str
+        Path to image from which detection is performed.
+    deftab_ : Pandas DataFrame
+        Contains defect information. We need location, charge, frame.
+    track_param : size-3 array, optional
+        Initial tracking parameters. The default is [None, None, 0].
+
+    Returns deftab, track_param, [loopbutton, databutton, moviebutton, okbutton, startbutton]
+    -------
+    deftab : Pandas DataFrame
+        Defect informations, to which the 'particle' column has been added or
+        filled with trajectory id.
+    track_param : size-3 iterable
+        Contains selected tracking parameters
+    refs : list of refecrences
+        contains the references to sliders and buttons, for interactivity.
+
+    """
     global quiver_artist
     global quiverM1
     global quiverM2
@@ -1369,7 +1418,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
             part_vec = defect_char_to_save['particle'].to_numpy()
             part_list = np.unique(part_vec)
             for i in range(len(part_list)):
-                defect_char_to_save['particle'].iloc[part_vec==part_list[i]]=i
+                defect_char_to_save.loc[part_vec==part_list[i], 'particle']=i
         
         defect_char_to_save.to_csv(fold)
        
