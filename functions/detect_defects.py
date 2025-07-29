@@ -11,6 +11,7 @@ from scipy.signal import convolve2d
 #import anisotropy_functions as fan
 from skimage import measure
 import matplotlib.pyplot as plt
+import warnings
 
 def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_threshold, plotall=False, method='weighted'):
 
@@ -50,7 +51,15 @@ def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_thres
     # use the binary filter to get the different ill-defined regions
     coherency[coherency==0] = 0.001
     weight = 1/np.array(coherency)
-    props = measure.regionprops_table(binariN, intensity_image=weight , properties=('centroid', 'bbox', 'centroid_weighted', 'intensity_min', 'coords'))
+    
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")  # catch all warnings
+        
+        props = measure.regionprops_table(binariN, intensity_image=weight , properties=('centroid', 'bbox', 'centroid_weighted', 'intensity_min', 'coords'))
+        
+        if w and any(issubclass(warning.category, RuntimeWarning) for warning in w):
+            print("No defect is detected on this image")
+
     #
 
     

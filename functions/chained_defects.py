@@ -519,6 +519,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
             back_img.set_cmap('binary')
         else:
             back_img.set_cmap('gray')
+        fig.canvas.draw_idle()
     reversebutton.on_clicked(invert_color)
 
     def finish(event):
@@ -545,8 +546,9 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
         over = True
         # The displayed image is just one frame, now the whole stack is computed.
-        print('Computing the whole stack...')
-        e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = can.get_anisotropy(imgpath, False, R_slider.val/bin_, round(1.5*w_slider.val), round(w_slider.val/bin_factor), fsig, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
+        if stack:
+            print('Computing the whole stack...')
+            e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = can.get_anisotropy(imgpath, False, R_slider.val/bin_, round(1.5*w_slider.val), round(w_slider.val/bin_factor), fsig, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
         plt.close(fig)
         #print(defect_char['x'])
         
@@ -609,9 +611,13 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         axsave.set_title('feature size = %.0f px, R = %.0f px\norder threshold = %.2f'%(w_slider.val, R_slider.val, Thresh_slider.val))
         
         fold = filedialog.asksaveasfile(defaultextension='.png') # make the user choose a file location
-        figsave.savefig(fold.name) # save figure at this location
+        if fold:
+            figsave.savefig(fold.name) # save figure at this location
+            print('Saving calcelled')
+        else:
+            print('Saved')
         plt.close(figsave)
-        print('Saved')
+        
     Savebutton.on_clicked(ClickSave)
     
     # Throw exception if the figure is closed 
@@ -813,7 +819,9 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     
     deftab = pd.concat([ptab, mtab, otab])
     deftab = deftab.reset_index(drop=True)
-    ### Start animation button
+    
+    ############# Buttons  ##################
+    # Start Animation #
     
     loopax = fig.add_axes([0.6, 0.2, 0.3, 0.07])
     loopbutton = CheckButtons(loopax, ["Loop movie"])
@@ -959,25 +967,35 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         #     plt.pause(0.1)
     
     startbutton.on_clicked(Start_Animation)
+    
     def save_data(event):
         fold = filedialog.asksaveasfilename(defaultextension='.csv') # the user choses a place in file explorer
         #print(fold)
-        deftab.to_csv(fold) # the DataFrame is saved as csv
+        if fold:
+            deftab.to_csv(fold) # the DataFrame is saved as csv
+            print('Data saved')
+        else:
+            print('Saving cancelled')
     
     def save_movie(event):
         fold = filedialog.asksaveasfilename(defaultextension='.tif') # the user choses a place in file explorer
         #writervideo = FFMpegWriter(fps=30)
-        if ani[0] is None:
-            Start_Animation(None)
-            #plt.close()
-        ani[0].save(fold, writer='pillow')#, fps=30)#, writer=writervideo)#, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as avi
-    
+        
+        if fold:
+            if ani[0] is None:
+                Start_Animation(None)
+                #plt.close()
+            ani[0].save(fold, writer='pillow')#, fps=30)#, writer=writervideo)#, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as avi
+            print('Movie Saved')
+        else:
+            print('Saving cancelled')
+            
     is_open = True
     def finish(event):
         nonlocal is_open
-        track_param[0] = searchslider.val
-        track_param[1] = memslider.val
-        track_param[2] = filtslider.val
+        track_param[0] = sliders[1].val
+        track_param[1] = sliders[0].val
+        track_param[2] = sliders[2].val
         is_open = False
         plt.close(fig)
         #return deftab
@@ -988,41 +1006,28 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     moviebutton.on_clicked(save_movie)
     okbutton.on_clicked(finish)
     
-    ### Memory slider
-    axmem = fig.add_axes([0.1, 0.25, 0.0225, 0.63])
-    memslider = Slider(
-        ax=axmem,
-        label="Max skipped\n frames",
-        valmin=1,
-        valmax=round(len(np.unique(deftab['frame']))/4),
-        valinit=memory,
-        valstep=1,
-        orientation="vertical"
-    )    
     
-    ### searchR slider
+    ########## sliders #############
+    slider_axes = []
+    sliders     = []
+    names       = ["Max skipped\n frames", "search\n range", "Filter small\n trajectories"]
+    valmaxes    = [round(len(np.unique(deftab['frame']))/4), round(max(img.shape)/4), round(0.8*len(img_st))]
+    inits       = [memory, searchR, filt]
     
-    axsearch = fig.add_axes([0.3, 0.25, 0.0225, 0.63])
-    searchslider = Slider(
-        ax=axsearch,
-        label="search\n range",
-        valmin=1,
-        valmax=round(max(img.shape)/4),
-        valinit=searchR,
-        valstep=1,
-        orientation="vertical"
-    )    
-    
-    axfilt = fig.add_axes([0.5, 0.25, 0.0225, 0.63])
-    filtslider = Slider(
-        ax=axfilt,
-        label="Filter small\n trajectories",
-        valmin=0,
-        valmax=round(0.8*len(img_st)),
-        valinit=filt,
-        valstep=1,
-        orientation="vertical"
-    )    
+    for i in range(len(inits)):
+        axsl = fig.add_axes([0.1+0.2*i, 0.25, 0.0225, 0.63])
+        thisslider = Slider(
+            ax=axsl,
+            label=names[i],
+            valmin=1,
+            valmax=valmaxes[i],
+            valinit=inits[i],
+            valstep=1,
+            orientation="vertical"
+        ) 
+        slider_axes.append(axsl)
+        sliders.append(thisslider)
+
     
     def change_tracking(val):
         global deftab
@@ -1034,12 +1039,15 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         mtab = deftab_raw[deftab_raw['charge']==-0.5]
         otab = deftab_raw[np.abs(deftab_raw['charge'])!=0.5]
         
+        print(sliders[1].val)
+        print(sliders[0].val)
+        
         if len(ptab)>0:
-            ptab = tp.link(ptab, search_range=searchslider.val, memory=memslider.val)
+            ptab = tp.link(ptab, search_range=sliders[1].val, memory=sliders[0].val)
         if len(mtab)>0:
-            mtab = tp.link(mtab, search_range=searchslider.val, memory=memslider.val)
+            mtab = tp.link(mtab, search_range=sliders[1].val, memory=sliders[0].val)
         if len(otab)>0:
-            otab = tp.link(otab, search_range=searchslider.val, memory=memslider.val)
+            otab = tp.link(otab, search_range=sliders[1].val, memory=sliders[0].val)
 
         deftab_raw = pd.concat([ptab, mtab, otab])
         
@@ -1062,8 +1070,8 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         #### Trak defects irrespective of their charge. We can have mixed trajectories
         #tempdf = tp.link(deftab_raw, search_range=searchslider.val, memory=memslider.val)
         #deftab_raw['particle'] = tempdf['particle']
-        if filtslider.val:
-            deftab_temp = tp.filter_stubs(deftab_raw, filtslider.val)
+        if sliders[2].val:
+            deftab_temp = tp.filter_stubs(deftab_raw, sliders[2].val)
             deftab = deftab_temp
         else:
             deftab = deftab_raw
@@ -1076,10 +1084,9 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         #     deftab.drop(np.arange(len(deftab_temp),len(deftab)))
         #     deftab.iloc[:,:] = deftab_temp.iloc[:,:]
         
-    searchslider.on_changed(change_tracking)
-    memslider.on_changed(change_tracking)
-    filtslider.on_changed(change_tracking)
     
+    for s in sliders:
+        s.on_changed(change_tracking)
     
     
     while is_open:
@@ -1323,65 +1330,66 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         nonlocal unit_per_frame
         fname = filedialog.askopenfilename()
         
-        if fname[-3:]=='tif':
-            filename = fname
-            img = tf.imread(filename)
-            vfield = None
-            with tf.TiffFile(filename) as tif:
-                axes = tif.series[0].axes
-                
-                if "Z" in axes or "T" in axes:
-                    stack=True
-                    if "C" in axes:
-                        img = np.mean(img, axis=3)
-                elif "C" in axes:
-                    img = np.mean(img, axis=2)
-                
-                if tif.imagej_metadata:
-                    try:
-                        unit_maybe = tif.imagej_metadata['unit']
-                        if unit_maybe!='':
-                            unit=unit_maybe
-                            unitBox.set_val(unit)
-                    except:
-                        opla = 78
-                        
-                    try:
-                        unitt = tif.imagej_metadata['time unit']
-                        unit_t = unitt
-                        unit_per_frame = tif.imagej_metadata['finterval']
-                        unittBox.set_val(unit_t)
-                        fpsBox.set_val(unit_per_frame)
-                    except:
-                        unitt=1 # blank statement for the required except keyword
-                xres = tif.pages[0].tags.get('XResolution')
-                if xres:
-                    xres = xres.value
-                    unit_per_px = xres[1]/xres[0]
-                    uppxBox.set_val(unit_per_px)
+        if fname: 
+            if fname[-3:]=='tif':
+                filename = fname
+                img = tf.imread(filename)
+                vfield = None
+                with tf.TiffFile(filename) as tif:
+                    axes = tif.series[0].axes
                     
-        elif fname[-3:]=='csv':
-            defect_char = pd.read_csv(fname)
-        elif fname[-3:]=='npy':
-            vfield = np.load(fname)
-        elif fname[-3]=='.mat':
-            dat = scipy.io.loadmat(fname)
-            x = dat['X']
-            y = dat['Y']
-            rho = dat['Rho']
-            psi = dat['Psi']
-        else:
-            filename = fname
-            img = plt.imread(filename)
-            vfield = None
-            if len(img.shape)>2:
-                stack = True
-        if stack:
-            ax.imshow(img[frame_slider.val,:,:], cmap='binary')
-            update_valmax(len(img))
-        else:
-            ax.imshow(img, cmap='binary')
-        fig.canvas.draw_idle()
+                    if "Z" in axes or "T" in axes:
+                        stack=True
+                        if "C" in axes:
+                            img = np.mean(img, axis=3)
+                    elif "C" in axes:
+                        img = np.mean(img, axis=2)
+                    
+                    if tif.imagej_metadata:
+                        try:
+                            unit_maybe = tif.imagej_metadata['unit']
+                            if unit_maybe!='':
+                                unit=unit_maybe
+                                unitBox.set_val(unit)
+                        except:
+                            opla = 78
+                            
+                        try:
+                            unitt = tif.imagej_metadata['time unit']
+                            unit_t = unitt
+                            unit_per_frame = tif.imagej_metadata['finterval']
+                            unittBox.set_val(unit_t)
+                            fpsBox.set_val(unit_per_frame)
+                        except:
+                            unitt=1 # blank statement for the required except keyword
+                    xres = tif.pages[0].tags.get('XResolution')
+                    if xres:
+                        xres = xres.value
+                        unit_per_px = xres[1]/xres[0]
+                        uppxBox.set_val(unit_per_px)
+                        
+            elif fname[-3:]=='csv':
+                defect_char = pd.read_csv(fname)
+            elif fname[-3:]=='npy':
+                vfield = np.load(fname)
+            elif fname[-3]=='.mat':
+                dat = scipy.io.loadmat(fname)
+                x = dat['X']
+                y = dat['Y']
+                rho = dat['Rho']
+                psi = dat['Psi']
+            else:
+                filename = fname
+                img = plt.imread(filename)
+                vfield = None
+                if len(img.shape)>2:
+                    stack = True
+            if stack:
+                ax.imshow(img[frame_slider.val,:,:], cmap='binary')
+                update_valmax(len(img))
+            else:
+                ax.imshow(img, cmap='binary')
+            fig.canvas.draw_idle()
     
         
     def detection(event):
@@ -1411,16 +1419,21 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     
     def savedat(event):
         fold = filedialog.asksaveasfilename(defaultextension='.csv')
-        defect_char_to_save = tp.filter_stubs(defect_char, track_param[2])
         
-        #re-index particle column so that it is not absurd
-        if 'particle' in defect_char_to_save.columns:
-            part_vec = defect_char_to_save['particle'].to_numpy()
-            part_list = np.unique(part_vec)
-            for i in range(len(part_list)):
-                defect_char_to_save.loc[part_vec==part_list[i], 'particle']=i
-        
-        defect_char_to_save.to_csv(fold)
+        if fold:
+            defect_char_to_save = tp.filter_stubs(defect_char, track_param[2])
+            
+            #re-index particle column so that it is not absurd
+            if 'particle' in defect_char_to_save.columns:
+                part_vec = defect_char_to_save['particle'].to_numpy()
+                part_list = np.unique(part_vec)
+                for i in range(len(part_list)):
+                    defect_char_to_save.loc[part_vec==part_list[i], 'particle']=i
+            
+            defect_char_to_save.to_csv(fold)
+            print('Data Saved')
+        else:
+            print('Saving cancelled')
        
     
     def update_img(event):
@@ -1803,6 +1816,6 @@ def average_profile(defect_char, img, f, R):
     return e, theta
 
 
-# %matplotlib qt
-# if __name__ == "__main__":
-#     keep = detect_defect_GUI()
+%matplotlib qt
+if __name__ == "__main__":
+    keep = detect_defect_GUI()
