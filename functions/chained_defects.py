@@ -1403,7 +1403,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
             defect_char, det_param, field, ref = defect_analyzer(filename, det_param, stack=stack, frame=frame_slider.val, um_per_px=unit_per_px, unit=unit, vfield=vfield, endsave=False)
             #vfield = field
             keep[0] = ref
-        print(det_param)
+        
         
             
     def check_track(event):

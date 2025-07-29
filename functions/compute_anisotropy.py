@@ -940,7 +940,7 @@ def plot_profiles(theta, e_vec, err_vec, individual = False):
 
 def trackmap(frame, traj, savedir=np.nan, filt=np.nan, yes_traj=True):
     ### Displays the frames with trajectories on it and saves them on the given folder.
-    ### To do the movie go to FIJI or be smarter than me
+    ### To do the movie go to FIJI or be smarter than men # well I know how now but I need time
     if not(np.isnan(filt)):
         traj = tp.filtering.filter_stubs(traj, filt)
     
