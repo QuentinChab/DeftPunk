@@ -12,9 +12,8 @@ import numpy as np
 import datetime
 from matplotlib.widgets import Button, Slider, CheckButtons, TextBox
 import pandas as pd
-import compute_anisotropy as can
-import anisotropy_functions as fan
-import OrientationPy as OPy
+from DeftPunk import processing as pc
+import DeftPunk.Analysis as an
 import tifffile as tf
 from matplotlib import cm
 import matplotlib.patheffects as pe
@@ -22,11 +21,10 @@ from matplotlib.colors import Normalize
 import tkinter
 from tkinter import filedialog
 import trackpy as tp
-from matplotlib.animation import ArtistAnimation, FuncAnimation, FFMpegWriter
+from matplotlib.animation import FuncAnimation
 from scipy import stats
 import scipy.io
 import os
-
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 
@@ -187,7 +185,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     
     
     ### Where we generate the initial display ###
-    e_vec, err_vec, cost_vec, theta_vec, phi, defect_char, vfield, pos = can.get_anisotropy(img, False, R/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=vfield, plotit=False, stack=stack, savedir = None, give_field = True)
+    e_vec, err_vec, cost_vec, theta_vec, phi, defect_char, vfield, pos = pc.get_anisotropy(img, False, R/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=vfield, plotit=False, stack=stack, savedir = None, give_field = True)
     fieldcolor = 'navy'
     my_field = [vfield, pos]
     
@@ -340,13 +338,13 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
 
     # draw the legend
     axlegend= fig.add_axes([0.32, 0.87, 0.5, 0.13])
-    imlegend = plt.imread(os.path.split(origin_file)[0]+os.sep+'GUI_images'+os.sep+'defect_type.png')
+    imlegend = plt.imread('DeftPunk'+os.sep+'GUI_images'+os.sep+'defect_type.png')
     axlegend.imshow(imlegend)
     axlegend.axis('off')
     
     # draw the schematics of the defects with different anisotropy
     axschem= fig.add_axes([0.9, 0.19, 0.1, 0.7])
-    imschem = plt.imread(os.path.split(origin_file)[0]+os.sep+'GUI_images'+os.sep+'defect_style.png')
+    imschem = plt.imread('DeftPunk'+os.sep+'GUI_images'+os.sep+'defect_style.png')
     axschem.imshow(imschem)
     axschem.axis('off')
     
@@ -372,7 +370,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
             input_field = vfield
         else:
             input_field=None
-        e_vec, err_vec, cost_vec, theta_vec, phi, dchar, field, pos = can.get_anisotropy(img, False, R_slider.val/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=input_field, plotit=False, stack=False, savedir = None, give_field=True)
+        e_vec, err_vec, cost_vec, theta_vec, phi, dchar, field, pos = pc.get_anisotropy(img, False, R_slider.val/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=input_field, plotit=False, stack=False, savedir = None, give_field=True)
         vfield = field
         defect_char = dchar
         my_field[0] = field
@@ -414,7 +412,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
             R_slider.label.set_text("Detection radius [px]\n(%.2f "%(um_per_px*R_slider.val)+unit+")")
         
         for i in range(len(defect_char)):
-            e_vec_i, err_vec_i, cost_vec_i, th = can.one_defect_anisotropy(field, R_slider.val/bin_, xc=defect_char['x'][i]/bin_, yc=defect_char['y'][i]/bin_, axis=defect_char['axis'][i])
+            e_vec_i, err_vec_i, cost_vec_i, th = pc.one_defect_anisotropy(field, R_slider.val/bin_, xc=defect_char['x'][i]/bin_, yc=defect_char['y'][i]/bin_, axis=defect_char['axis'][i])
             new_anisotropy[i] = e_vec_i
         defect_char['Anisotropy'] = new_anisotropy
         R_vis = False
@@ -453,7 +451,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
             input_field = vfield
         else:
             input_field=None
-        e_vec, err_vec, cost_vec, theta_vec, phi, dchar, vfield, pos = can.get_anisotropy(img, False, R_slider.val/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=input_field, plotit=False, stack=stack, savedir = None, give_field=True)
+        e_vec, err_vec, cost_vec, theta_vec, phi, dchar, vfield, pos = pc.get_anisotropy(img, False, R_slider.val/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=input_field, plotit=False, stack=stack, savedir = None, give_field=True)
         defect_char = dchar
         my_field[0] = vfield
         my_field[1] = pos
@@ -553,7 +551,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         # The displayed image is just one frame, now the whole stack is computed.
         if stack:
             print('Computing the whole stack...')
-            e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = can.get_anisotropy(imgpath, False, R_slider.val/bin_, round(1.5*w_slider.val), round(w_slider.val/bin_factor), fsig, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
+            e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = pc.get_anisotropy(imgpath, False, R_slider.val/bin_, round(1.5*w_slider.val), round(w_slider.val/bin_factor), fsig, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
         plt.close(fig)
         #print(defect_char['x'])
         
@@ -1307,7 +1305,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
 
         ax.imshow(img, cmap='binary')
     else:
-        img = plt.imread('..'+os.sep+'GUI_images'+os.sep+'spot_defect.jpg')
+        img = plt.imread('DeftPunk'+os.sep+'GUI_images'+os.sep+'spot_defect.jpg')
         ax.imshow(img, cmap='binary')
     plt.title('Image displayed for\n parameter choice')
     plt.subplots_adjust(bottom=0.2, left=0.4, right=0.8)  # Leave space for the button
@@ -1509,7 +1507,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         #Loop over files
         for filename in os.listdir(folder):
             if filename.endswith('tif') or filename.endswith('png'):
-                e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = can.get_anisotropy(folder+os.sep+filename, False, det_param[1]/bin_, sigma, bin_, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
+                e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = pc.get_anisotropy(folder+os.sep+filename, False, det_param[1]/bin_, sigma, bin_, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
                 
                 defect_table.to_csv(folder+os.sep+'data_'+filename[:-3]+'csv')
                 
@@ -1567,9 +1565,9 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         
         stat_me(defect_char, img=img, stack=stack, frame=0, unit=unit, unit_per_px=unit_per_px, tunit=unit_t, t_per_frame=unit_per_frame)
         ppattern, mpattern = defect_pattern(img, defect_char)
-        orientation, coherence, ene, X, Y = OPy.orientation_analysis(ppattern, sigma=round(1.5*f), binning=round(f/4), plotf=False)
-        phi, theta_unit = fan.compute_angle_diagram(orientation, R)
-        e_pattern, err_e, costmin, theta_unit = can.one_defect_anisotropy(orientation, R=R)
+        orientation, coherence, ene, X, Y = pc.orientation_analysis(ppattern, sigma=round(1.5*f), binning=round(f/4), plotf=False)
+        phi, theta_unit = pc.compute_angle_diagram(orientation, R)
+        e_pattern, err_e, costmin, theta_unit = pc.one_defect_anisotropy(orientation, R=R)
         
         plt.figure()
         plt.imshow(ppattern, cmap='binary')
@@ -1579,7 +1577,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         
         
         e_av_profile, average_theta = average_profile(defect_char, img, f, R)
-        es, costs = fan.anisotropy_comparison(phi, average_theta)
+        es, costs = pc.anisotropy_comparison(phi, average_theta)
         e_av_profile = es[np.argmin(costs)]
         
         plt.figure()
@@ -1595,7 +1593,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         plt.imshow(mpattern, cmap='gray')
         plt.title ('Average field around -1/2 defect')
         if stack:
-            fan.motility_analysis(defect_char, dt=1, unit_per_frame=unit_per_frame, unit_t = unit_t, unit_per_px = unit_per_px, unit_space = unit)
+            an.motility_analysis(defect_char, dt=1, unit_per_frame=unit_per_frame, unit_t = unit_t, unit_per_px = unit_per_px, unit_space = unit)
     
     textspaceax = fig.add_axes([0.85, 0.85, 0.12, 0.07])
     textspaceax.axis('off')
@@ -1826,22 +1824,22 @@ def defect_pattern(field, dataset, cropsize = 100):
             tpset = pset[pset['frame']==i]
             tmset = mset[mset['frame']==i]
             for ip in range(len(tpset)):
-                xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field[i], axis=-tpset['axis'].iloc[ip], cropsize=cropsize, xcenter=tpset['x'].iloc[ip], ycenter=tpset['y'].iloc[ip])
+                xcrop, ycrop, rot_field = pc.crop_rotate_scalar(field[i], axis=-tpset['axis'].iloc[ip], cropsize=cropsize, xcenter=tpset['x'].iloc[ip], ycenter=tpset['y'].iloc[ip])
                 patterns_p[pincrement] = rot_field
                 pincrement +=1
                 # plt.figure()
                 # plt.imshow(rot_field, cmap='binary')
             for im in range(len(tmset)):
-                xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field[i], axis=-tmset['axis'].iloc[im], cropsize=cropsize, xcenter=tmset['x'].iloc[im], ycenter=tmset['y'].iloc[im])
+                xcrop, ycrop, rot_field = pc.crop_rotate_scalar(field[i], axis=-tmset['axis'].iloc[im], cropsize=cropsize, xcenter=tmset['x'].iloc[im], ycenter=tmset['y'].iloc[im])
                 patterns_m[mincrement] = rot_field
                 mincrement +=1
     else:
 
         for ip in range(len(pset)):
-            xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-pset['axis'].iloc[ip], cropsize=cropsize, xcenter=pset['x'].iloc[ip], ycenter=pset['y'].iloc[ip])
+            xcrop, ycrop, rot_field = pc.crop_rotate_scalar(field, axis=-pset['axis'].iloc[ip], cropsize=cropsize, xcenter=pset['x'].iloc[ip], ycenter=pset['y'].iloc[ip])
             patterns_p[ip] = rot_field
         for im in range(len(mset)):
-            xcrop, ycrop, rot_field = fan.crop_rotate_scalar(field, axis=-mset['axis'].iloc[im], cropsize=cropsize, xcenter=mset['x'].iloc[im], ycenter=mset['y'].iloc[im])
+            xcrop, ycrop, rot_field = pc.crop_rotate_scalar(field, axis=-mset['axis'].iloc[im], cropsize=cropsize, xcenter=mset['x'].iloc[im], ycenter=mset['y'].iloc[im])
             patterns_m[im] = rot_field
     average_p = np.nanmean(patterns_p, axis=0)
     
@@ -1858,12 +1856,12 @@ def average_profile(defect_char, img, f, R):
     th_list = []
     ref = False
     for i in range(len(table)):
-        orientation, coherence, ene, X, Y = OPy.orientation_analysis(img[table['frame'].iloc[i]], sigma=round(1.5*f), binning=round(f/4), plotf=False)
+        orientation, coherence, ene, X, Y = pc.orientation_analysis(img[table['frame'].iloc[i]], sigma=round(1.5*f), binning=round(f/4), plotf=False)
         # print(orientation.shape)
         # print(X.shape)
         # print(table['x'].iloc[i])
         # print(table['y'].iloc[i])
-        e, err_e, costmin, theta_unit = can.one_defect_anisotropy(orientation, R=R, xc=table['x'].iloc[i]/2, yc=table['y'].iloc[i]/2, axis = table['axis'].iloc[i], plotit=ref)
+        e, err_e, costmin, theta_unit = pc.one_defect_anisotropy(orientation, R=R, xc=table['x'].iloc[i]/2, yc=table['y'].iloc[i]/2, axis = table['axis'].iloc[i], plotit=ref)
         ref = False
         #phi, theta_unit = fan.compute_angle_diagram(orientation, R, center=(, ), axis=)
         th_list.append(theta_unit)

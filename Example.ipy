@@ -60,7 +60,7 @@ det_param = [feature_in, Rdet_in, 0.5]
 import numpy as np
 import sys
 sys.path.append(function_directory+os.sep+'functions'+os.sep)
-from chained_defects import defect_analyzer # import our function
+from DefPunk import defect_analyzer # import our function
 
 
 
