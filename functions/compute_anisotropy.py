@@ -28,6 +28,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
 from matplotlib.colors import Normalize
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 from OrientationPy import orientation_analysis
 import os
 from detect_defects import defect_detection
@@ -173,7 +174,7 @@ def one_defect_anisotropy(field, R=np.nan, xc=None, yc=None, axis = 0, err = 0.0
     
     emin = np.nan
     es_min = np.nan
-    costmin = np.Inf
+    costmin = np.inf
     costs_min = np.nan
     th_min = np.ones(phi.shape)*np.nan
     err_e = np.nan
@@ -248,7 +249,7 @@ def track_by_charge(df, searchR, mem):
     return df
 
     
-def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, BoxSize=8, order_threshold=0.25, peak_threshold=0.85, prescribed_field=None, plotit=False, stack=False, savedir = None, give_field=False):
+def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=None, fov=2, BoxSize=6, order_threshold=0.25, peak_threshold=0.75, prescribed_field=None, plotit=False, stack=False, savedir = None, give_field=False):
     """
     This function takes the path of an image, compute the orientation field, 
     finds the defect and estimates the naisotropy of the +1/2 types
@@ -302,6 +303,7 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, B
         Corresponding arrow positions [x, y]. Only returned if give_field=True.
 
     """
+    
     if isinstance(imgpath, str):
         if imgpath[-3:]=='tif':
             img = tf.imread(imgpath)
@@ -610,6 +612,12 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=10, fov=2, B
         return e_vec, err_vec, cost_vec, theta_vec, phi, defect_char, orientation, [x,y]
     else:
         return e_vec, err_vec, cost_vec, theta_vec, phi, defect_char
+
+def analyze_image(imgpath, feature_size, R, order_threshold, prescribed_field=None, plotit=False, stack=False, savedir = None, give_field=False):
+    bin_    = round(feature_size/4)
+    sigma   = round(feature_size*1.5)
+    return  get_anisotropy(imgpath, False, R, sigma, bin_, order_threshold=order_threshold, prescribed_field=prescribed_field, plotit=plotit, stack=stack, savedir = savedir, give_field=give_field)
+    
 
 def anisotropy_on_directory(dirname, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, R, plotf = True):
     """
@@ -947,6 +955,7 @@ def trackmap(frame, traj, savedir=np.nan, filt=np.nan, yes_traj=True):
     if len(frame)<np.max(traj['frame']):
         print('The stack and the trajectory dataframe do not match.')
     
+    figlist = []
     framevec = traj['frame']
     for i in range(len(frame)):
         trajframe = traj[framevec<=i]
@@ -962,9 +971,16 @@ def trackmap(frame, traj, savedir=np.nan, filt=np.nan, yes_traj=True):
             for j in range(len(ntraj)):
                 plt.plot(trajframe['x'][particleframe==ntraj[j]], trajframe['y'][particleframe==ntraj[j]])
         
-        if isinstance(savedir, str):
-            plt.savefig(savedir+os.sep+'frame%.0f.tif'%(i), dpi=150)
+        canvas = FigureCanvasAgg(f)
+        canvas.draw()
+        buf = canvas.buffer_rgba()
+        img_array = np.asarray(buf)
+        figlist.append(img_array[:, :, :3])
         plt.close()
+    if isinstance(savedir, str):
+        stack = np.stack(figlist)
+        tf.imwrite(savedir+os.sep+'movie.tif', stack)
+        
         
         
 def temporal_analysis(traj, min_length = 20, N_defects=3):
