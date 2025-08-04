@@ -9,6 +9,7 @@ It's the highest function of the hierarchy: it only treats interface
 """
 import matplotlib.pyplot as plt
 import numpy as np
+import datetime
 from matplotlib.widgets import Button, Slider, CheckButtons, TextBox
 import pandas as pd
 import compute_anisotropy as can
@@ -537,7 +538,11 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         if endsave:
             if savedir=='Select':
                 print('Where to save the data?')
+                root = tkinter.Tk()
+                root.withdraw()  # Hide the empty main window
+                root.call('wm', 'attributes', '.', '-topmost', '1') 
                 fold = filedialog.asksaveasfile(defaultextension='.csv') # the user choses a place in file explorer
+                root.destroy()
             else:
                 fold = Placeholder(savedir+os.sep+'data.csv')
         
@@ -555,6 +560,14 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         if endsave:
             if not fold is None:
                 defect_char.to_csv(fold.name) # the DataFrame is saved as csv
+                paramfile = fold.name + '_parameters.txt'
+                now_ = datetime.datetime.now()
+                with open(paramfile, "a") as f:
+                    f.write('At '+str(now_))
+                    f.write('\nfeature size = %.0f '%(det_param[0]*um_per_px)+unit)
+                    f.write('\nnematic order threshold = %.2f '%(det_param[2]))
+                    f.write('\nDetection Radius = %.0f '%(det_param[1]*um_per_px)+unit)
+                    
                 print('Saved')
             else:
                 print('Done')
@@ -609,8 +622,11 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         axsave.set_ylim(ax.get_ylim())
         # Write parameters as title
         axsave.set_title('feature size = %.0f px, R = %.0f px\norder threshold = %.2f'%(w_slider.val, R_slider.val, Thresh_slider.val))
-        
+        root = tkinter.Tk()
+        root.withdraw()  # Hide the empty main window
+        root.call('wm', 'attributes', '.', '-topmost', '1') 
         fold = filedialog.asksaveasfile(defaultextension='.png') # make the user choose a file location
+        root.destroy()
         if fold:
             figsave.savefig(fold.name) # save figure at this location
             print('Saving calcelled')
@@ -969,16 +985,31 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     startbutton.on_clicked(Start_Animation)
     
     def save_data(event):
+        root = tkinter.Tk()
+        root.withdraw()
+        root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
         fold = filedialog.asksaveasfilename(defaultextension='.csv') # the user choses a place in file explorer
+        root.destroy()
         #print(fold)
         if fold:
             deftab.to_csv(fold) # the DataFrame is saved as csv
+            paramfile = fold[:-4] + '_parameters.txt'
+            now_ = datetime.datetime.now()
+            with open(paramfile, "a") as f:
+                f.write('At '+str(now_))
+                f.write('\nsearch range = %.0f '%(track_param[0])+' px')
+                f.write('\nmemory = %.0f '%(track_param[1]) + ' frames')
+                f.write('\nfilter (minimum trajectory length) = %.0f '%(track_param[2])+' frames')
             print('Data saved')
         else:
             print('Saving cancelled')
     
     def save_movie(event):
+        root = tkinter.Tk()
+        root.withdraw()
+        root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
         fold = filedialog.asksaveasfilename(defaultextension='.tif') # the user choses a place in file explorer
+        root.destroy()
         #writervideo = FFMpegWriter(fps=30)
         
         if fold:
@@ -1039,8 +1070,6 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         mtab = deftab_raw[deftab_raw['charge']==-0.5]
         otab = deftab_raw[np.abs(deftab_raw['charge'])!=0.5]
         
-        print(sliders[1].val)
-        print(sliders[0].val)
         
         if len(ptab)>0:
             ptab = tp.link(ptab, search_range=sliders[1].val, memory=sliders[0].val)
@@ -1328,7 +1357,11 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         nonlocal unit_per_px
         nonlocal unit_t
         nonlocal unit_per_frame
+        root = tkinter.Tk()
+        root.withdraw()
+        root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
         fname = filedialog.askopenfilename()
+        root.destroy()
         
         if fname: 
             if fname[-3:]=='tif':
@@ -1418,19 +1451,38 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
             print('You should perform detection first.')    
     
     def savedat(event):
+        root = tkinter.Tk()
+        root.withdraw()
+        root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
         fold = filedialog.asksaveasfilename(defaultextension='.csv')
+        root.destroy()
         
         if fold:
-            defect_char_to_save = tp.filter_stubs(defect_char, track_param[2])
             
             #re-index particle column so that it is not absurd
-            if 'particle' in defect_char_to_save.columns:
+            if 'particle' in defect_char.columns:
+                defect_char_to_save = tp.filter_stubs(defect_char, track_param[2])
                 part_vec = defect_char_to_save['particle'].to_numpy()
                 part_list = np.unique(part_vec)
                 for i in range(len(part_list)):
                     defect_char_to_save.loc[part_vec==part_list[i], 'particle']=i
+            else:
+                
+                defect_char_to_save = defect_char
             
             defect_char_to_save.to_csv(fold)
+            
+            paramfile = fold[:-4] + '_parameters.txt'
+            now_ = datetime.datetime.now()
+            with open(paramfile, "a") as f:
+                f.write('At '+str(now_))
+                
+                f.write('\nfeature size = %.0f '%(det_param[0]*unit_per_px)+unit)
+                f.write('\nnematic order threshold = %.2f '%(det_param[2]))
+                f.write('\nDetection Radius = %.0f '%(det_param[1]*unit_per_px)+unit)
+                f.write('\nsearch range = %.0f '%(track_param[0]*unit_per_px)+unit)
+                f.write('\nmemory = %.0f '%(track_param[1]*unit_per_frame) + unit_t)
+                f.write('\nfilter (minimum trajectory length) = %.0f '%(track_param[2]*unit_per_frame)+unit_t)
             print('Data Saved')
         else:
             print('Saving cancelled')
@@ -1447,7 +1499,11 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         global det_param
         print('Apply the analysis with chosen parameters on a directory. Chose it!')
         print(det_param)
+        root = tkinter.Tk()
+        root.withdraw()
+        root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
         folder = filedialog.askdirectory()
+        root.destroy()
         bin_ = round(det_param[0]/4)
         sigma = round(1.5*det_param[0])
         #Loop over files
@@ -1816,6 +1872,6 @@ def average_profile(defect_char, img, f, R):
     return e, theta
 
 
-%matplotlib qt
+
 if __name__ == "__main__":
     keep = detect_defect_GUI()
