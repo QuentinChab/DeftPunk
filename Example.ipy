@@ -16,8 +16,8 @@ Please be patient with the sliders, computations can take a few seconds
 
 #################################### 
 %matplotlib qt
-
 import os
+import matplotlib.pyplot as plt
 
 ######## FILL THIS SECTION #########
 ####################################
@@ -29,7 +29,7 @@ function_directory = os.getcwd() # current active folder
 path = function_directory+os.sep+'20240215_Actin_Only_8_tif.tif'
 
 # path to save data
-savedir = 'Select'#r'C:\Users\Quentin\Documents\Analysis\example_savedir'
+savedir = 'Select'#Fill this field with your target location or with 'Select'
 
 # Say wether the image is a stack
 stack = False
@@ -66,8 +66,15 @@ from chained_defects import defect_analyzer # import our function
 
 
 ######### Call the function #########
-def_tab, det_out, _, _ = defect_analyzer(path, det_param, stack=stack, frame=frame, savedir=savedir)
+def_tab, det_out, _, buttons = defect_analyzer(path, det_param, stack=stack, frame=frame, savedir=savedir)
 
+# wait for the user to select the correct values 
+#(tracks for the moment the inteface window is closed)
+figure_ref = plt.gcf() # current figure (interface)
+while plt.fignum_exists(figure_ref.number):
+     plt.pause(0.1)
+
+# display thise values
 f_out, R_out, order_out = det_out
 
 print('You chose a feature size of %.0f px, a threshold for order parameter of %.2f and a detection radius of %.0f px'%(f_out, order_out, R_out))
