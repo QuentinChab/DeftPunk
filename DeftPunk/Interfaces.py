@@ -44,7 +44,15 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
        
     > defect_char, det_param, vfield, _ = defect_analyzer(imgpath, det_param, stack=True, frame=0, endsave=True, savedir='Select')
     
-    The detection parameters are described at the end.
+    The detection parameters are described at the end of the documentation.
+    
+    The function is structured as follow:
+        - Input read-outs
+        - Initial detection (from initial parameters)
+        - Sliders creation
+        - Initial display
+        - Update functions for sliders
+        - Buttons creation + update function
     
     Parameters
        ----------
@@ -149,6 +157,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     global defect_char # dataset
     global over # To track if the window is closed before end of function
     
+    ############ Inupt read-out ###################
     
     w = det_param[0]
     R = det_param[1]
@@ -191,7 +200,8 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     
     
     
-    ### Where we generate the initial display ###
+    ########## Computation of initial detection ######################
+    
     # detection of defect location, axis and anisotropy
     e_vec, err_vec, cost_vec, theta_vec, phi, defect_char, vfield, pos = pc.get_anisotropy(img, False, R/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=vfield, plotit=False, stack=stack, savedir = None, give_field = True)
     fieldcolor = 'navy'
@@ -212,7 +222,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     
     lim = 0.5 # limits of anisotropy colorbar
     
-    ##### Sliders ############
+    ####################### Sliders creation ####################
     if unit=='px':
         labw = 'Feature size [px]'
         labR = "Detection\n radius [px]"
@@ -339,6 +349,8 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
         return artists_vec, R_vec
     
+    ############ Initial display ##################################
+    
     # Lists of objects. It will be use to change their visibility and remove them
     art, R_vec = add_points(ax, defect_char, plot_cbar=True)
     
@@ -361,7 +373,8 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     axschem.imshow(imschem)
     axschem.axis('off')
     
-    ##### Update functions for sliders
+    ##### Update functions for sliders ######################
+    
     # The function to be called anytime a slider's value changes
     # Updating the feature_size w. It change director field, defect detection and anisotropies.
     def update_w(val):
@@ -525,7 +538,8 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     R_slider.on_changed(update_R)
     w_slider.on_changed(update_w)
     Thresh_slider.on_changed(update_order)
-
+    
+    ###################" Buttons creation #############################""
     # Create 6 `matplotlib.widgets.Button`
     reverseax = fig.add_axes([0.05, 0.025, 0.1, 0.04])
     reversebutton = Button(reverseax, 'Invert Color', hovercolor='0.975')
@@ -678,7 +692,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
             raise Exception("Program interrupted by the user (closed the figure).") 
     fig.canvas.mpl_connect('close_event', on_close)
     
-    ### In case there is a problem with synchrony you can uncomment this
+    ### In case there is a problem with synchrony you can uncomment this (the execution will be stopped until the figure is closed)
     # 
     # while plt.fignum_exists(fig.number):
     #     plt.pause(0.1)
@@ -709,6 +723,7 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         contains the references to sliders and buttons, for interactivity.
 
     """
+    # objects to be updated and kept along the function execution
     global quiver_artist
     global quiverM1
     global quiverM2
@@ -718,28 +733,28 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     global deftab
     global deftab_raw
     
+    # get the parameters
     searchR = track_param[0]
     memory = track_param[1]
     filt = track_param[2]
-    
     loop = False
+    
+    # load the stack
     if imgpath[-3:]=='tif':
         img_st = tf.imread(imgpath)
     else:
         img_st = plt.imread(imgpath)
     
+    # create temporary tables to modify the files
     deftab_raw = deftab_
-    deftab = deftab_raw#tp.filter_stubs(deftab_raw, filt)
+    deftab = deftab_raw
     
-    # if it is a multichannel image (color), take the first one 
-
+    # if it is a multichannel image (color), take the first channel 
     if img_st.ndim>3:
         img_st = img_st[:,0,:,:] #if we have several intensity channels take the first one
     img = img_st[0,:,:]
 
-    #plt.figure()
     fig =  plt.figure()
-    #plt.imshow(img, cmap='binary')
     
     #Initial slider value. /!\ DO NOT CORRESPOND NECESSARILY TO INITIAL TRACKING VALUES
     if searchR is None:
@@ -750,9 +765,10 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     if memory is None:
         memory = max(round(len(np.unique(deftab['frame']))/15), 2)
     
+    # This will contain the animation (in a list so it is modified inside functions)
     ani = [None]
     
-    #sort the defects
+    #sort the defects according to charge
     ptab = deftab[deftab['charge']==0.5]
     mtab = deftab[deftab['charge']==-0.5]
     otab = deftab[np.abs(deftab['charge'])!=0.5]
@@ -789,11 +805,13 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         global loop
         #plt.figure()
         figA, axA = plt.subplots()
+        # start with drawing 1st frame
         img_artist = axA.imshow(img_st[0,:,:], cmap='binary', animated=True)
         
-        
+        # take info from frame 0
         defframe = deftab[deftab['frame']==0]
         
+        # for plus and minus defects, get informations from table
         lim = 0.5
         e_map = 'PiYG'
         colorm = plt.get_cmap(e_map)
@@ -812,41 +830,39 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         quiverM3 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM-2*np.pi/3), np.sin(axisM-2*np.pi/3), angles='xy', color=minuscolor)
         plt.colorbar(cm.ScalarMappable(norm=Normalize(-lim, lim), cmap=e_map), ax=axA, label='Splay-Bend Anisotropy []')
         
+        # initialize lists for trajectory plotting
         if len(deftab):
             trajdata_x = [ [] for _ in range(int(np.max(deftab['particle'])+1)) ]
             trajdata_y = [ [] for _ in range(int(np.max(deftab['particle'])+1)) ]
             traj_artist = [None]*int(np.max(deftab['particle']+1))
         else:
             traj_artist = []
-        #print(trajdata_x)
+            
         defpart = np.array(np.unique(defframe['particle']), dtype=int)
+        # append to the list from the data of the frame 0 
         for i in range(len(defpart)):
             trajdata_x[defpart[i]].append(defframe['x'][defframe['particle']==defpart[i]].iloc[0])
             trajdata_y[defpart[i]].append(defframe['y'][defframe['particle']==defpart[i]].iloc[0])
         
+        # prepare the figure
         for i in range(len(traj_artist)):
             traj_artist[i], = axA.plot([], [])
-            #print(trajdata_x[defpart[i]])
+
         
-        #art_list = add_points(axA, deftab, 0, animated=True)
-        ## create all frames
-        #arts = []
-        # for i in range(len(img_st)):
-        #     im = axA.imshow(img_st[i,:,:], cmap='binary', animated=True)
-        #     art_list = add_points(axA, deftab, i, animated=True)
-        #     arts.append([im, *art_list])
-            # arts_list = []
-        
-        def update(frame):
+        def update(frame): # for this animation, the next frame is updated from current frame
             global quiver_artist
             global quiverM1
             global quiverM2
             global quiverM3
             global traj_artist
+            
+            # current image is the frame number `frame`
             img_artist.set_array(img_st[frame,:,:])
             
+            # points from current frame
             defframe = deftab[deftab['frame']==frame]
             
+            # clean objects from previous update
             quiver_artist.remove()
             quiverM1.remove()
             quiverM2.remove()
@@ -858,49 +874,35 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
                     trajdata_y[i] = []
                     traj_artist[i].set_data([], [])
             
+            # split plus and minus defects
             defP = defframe[defframe['charge']==0.5]
             centroidsP = np.array([defP['y'], defP['x']]).transpose()
             axisP = np.array(defP['axis'])
             c = colorm(np.array(defP['Anisotropy'])/2/lim+0.5)
+            # plot +1/2 defects 
             quiver_artist = axA.quiver(centroidsP[:,1], centroidsP[:,0], np.cos(axisP), np.sin(axisP), angles='xy', color=c, edgecolor='k', linewidth=1)
             
             defM = defframe[defframe['charge']==-0.5]
             centroidsM = np.array([defM['y'], defM['x']]).transpose()
             axisM = np.array(defM['axis'])
             minuscolor = 'cornflowerblue'
+            # plot -1/2 defects
             quiverM1 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM), np.sin(axisM), angles='xy', color=minuscolor)
             quiverM2 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM+2*np.pi/3), np.sin(axisM+2*np.pi/3), angles='xy', color=minuscolor)
             quiverM3 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM-2*np.pi/3), np.sin(axisM-2*np.pi/3), angles='xy', color=minuscolor)
             
             defpart = np.array(np.unique(defframe['particle']), dtype=int)
+            # append the trajectory data with current defects.
             for i in range(len(defpart)):
                 trajdata_x[defpart[i]].append(defframe['x'][defframe['particle']==defpart[i]].iloc[0])
                 trajdata_y[defpart[i]].append(defframe['y'][defframe['particle']==defpart[i]].iloc[0])
-                #print(trajdata_x[defpart[i]])
                 if not (traj_artist[defpart[i]] is None):
                     traj_artist[defpart[i]].set_data(trajdata_x[defpart[i]], trajdata_y[defpart[i]])
-        
-            # if 'art_list' in globals():
-            #     for j in range(len(art_list)):
-            #         if art_list[j] is not None:
-            #             art_list[j].remove()
-            
-            
-            # art_list_temp = add_points(axA, deftab, frame, animated=True)
-            # for j in range(max(len(art_list), len(art_list_temp))):
-            #     if j<len(art_list):
-            #         if j<len(art_list_temp):
-            #             art_list[j] = art_list_temp[j]
-            #         else:
-            #             art_list[j] = None
-            #     else:
-            #         art_list.append(art_list_temp[j])
-            
-            #traj_artist[0].figure.canvas.draw_idle()
+
             return [img_artist, quiver_artist, quiverM1, quiverM2, quiverM3, *traj_artist]
         
         ## Start the animation
-        #ani[0] = ArtistAnimation(figA, arts, interval=5, blit=False, repeat=loopbutton.get_active())
+        # FuncAnimation make an animation from a figure and an update function
         ani[0] = FuncAnimation(figA, update, frames=range(len(img_st)), interval=5, blit=False, repeat=loop)#loopbutton.get_active())
         
         # while plt.fignum_exists(figA.number):
@@ -909,14 +911,16 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     startbutton.on_clicked(Start_Animation)
     
     def save_data(event):
+        # call browser for user to select save path
         root = tkinter.Tk()
         root.withdraw()
         root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
         fold = filedialog.asksaveasfilename(defaultextension='.csv') # the user choses a place in file explorer
         root.destroy()
-        #print(fold)
+        
         if fold:
             deftab.to_csv(fold) # the DataFrame is saved as csv
+            # parameters are stored in a txt file
             paramfile = fold[:-4] + '_parameters.txt'
             now_ = datetime.datetime.now()
             with open(paramfile, "a") as f:
@@ -929,18 +933,17 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
             print('Saving cancelled')
     
     def save_movie(event):
+        # call a browser
         root = tkinter.Tk()
         root.withdraw()
         root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
         fold = filedialog.asksaveasfilename(defaultextension='.tif') # the user choses a place in file explorer
         root.destroy()
-        #writervideo = FFMpegWriter(fps=30)
         
-        if fold:
+        if fold: # is the user selected a name
             if ani[0] is None:
-                Start_Animation(None)
-                #plt.close()
-            ani[0].save(fold, writer='pillow')#, fps=30)#, writer=writervideo)#, extra_args=['-vcodec', 'libx264']) # the DataFrame is saved as avi
+                Start_Animation(None) # create animation
+            ani[0].save(fold, writer='pillow')
             print('Movie Saved')
         else:
             print('Saving cancelled')
@@ -953,8 +956,6 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         track_param[2] = sliders[2].val
         is_open = False
         plt.close(fig)
-        #return deftab
-        #return deftab, memslider.val, searchslider.val, filtslider.val, [loopbutton, databutton, moviebutton, okbutton, startbutton]
     
     loopbutton.on_clicked(checkloop)
     databutton.on_clicked(save_data)
@@ -969,6 +970,7 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     valmaxes    = [round(len(np.unique(deftab['frame']))/4), round(max(img.shape)/4), round(0.8*len(img_st))]
     inits       = [memory, searchR, filt]
     
+    # iteratively create sliders (same update function)
     for i in range(len(inits)):
         axsl = fig.add_axes([0.1+0.2*i, 0.25, 0.0225, 0.63])
         thisslider = Slider(
@@ -984,12 +986,12 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         sliders.append(thisslider)
 
     
-    def change_tracking(val):
+    def change_tracking(val): # update function for the 3 sliders
         global deftab
         global deftab_raw
         tp.quiet()
         
-        #### Perform 3 tracking, for -1/2, +1/2 and others -> does not work
+        #### Perform 3 tracking, for -1/2, +1/2 and others
         ptab = deftab_raw[deftab_raw['charge']==0.5]
         mtab = deftab_raw[deftab_raw['charge']==-0.5]
         otab = deftab_raw[np.abs(deftab_raw['charge'])!=0.5]
@@ -1004,44 +1006,32 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
 
         deftab_raw = pd.concat([ptab, mtab, otab])
         
-        # # prevent the particle number to be redundant
+        # # prevent the particle number to be redundant when tables are merged again
         ppart = ptab['particle'].to_numpy()
         mpart = mtab['particle'].to_numpy()
         opart = otab['particle'].to_numpy()
         
-        # print(ppart)
-        # print(mpart)
-        #deftab['particle'] = [*ptab['particle'].to_numpy(), *mtab['particle'].to_numpy(), *otab['particle'].to_numpy()]
-
-        
         mpart = mpart + np.max(ppart) + 1
         opart = opart + np.max(mpart) + 1
         
-        
+        # merge table from the -1/2, +1/2 and others
         deftab_raw['particle'] = [*ppart, *mpart, *opart]
         
-        #### Trak defects irrespective of their charge. We can have mixed trajectories
-        #tempdf = tp.link(deftab_raw, search_range=searchslider.val, memory=memslider.val)
-        #deftab_raw['particle'] = tempdf['particle']
+        # filter small trajectories
         if sliders[2].val:
             deftab_temp = tp.filter_stubs(deftab_raw, sliders[2].val)
             deftab = deftab_temp
         else:
             deftab = deftab_raw
-        # Ndiff = len(deftab_temp) - len(deftab)
-        # if Ndiff>0:    
-        #     deftab.iloc[:,:] = deftab_temp.iloc[:len(deftab), :]
-        #     for j in range(Ndiff):
-        #         deftab.append(deftab_temp[len(deftab)+j])
-        # else:
-        #     deftab.drop(np.arange(len(deftab_temp),len(deftab)))
-        #     deftab.iloc[:,:] = deftab_temp.iloc[:,:]
         
-    
+    # iteratively activate sliders
     for s in sliders:
         s.on_changed(change_tracking)
     
-    
+    # This stops execution until detection is finished.
+    # It makes the function blink but I need it otherwise return deftab is not correct
+    # (it return the tracking with initial parameters and not chosen ones)
+    # Working on a solution
     while is_open:
         fig.canvas.flush_events()
         plt.pause(0.1)
