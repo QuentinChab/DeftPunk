@@ -9,22 +9,11 @@ It's the highest function of the hierarchy: it only treats interface
 """
 import matplotlib.pyplot as plt
 import numpy as np
-import datetime
-from matplotlib.widgets import Button, Slider, CheckButtons, TextBox
-import pandas as pd
-import compute_anisotropy as can
-import anisotropy_functions as fan
-import OrientationPy as OPy
 import tifffile as tf
 from matplotlib import cm
 import matplotlib.patheffects as pe
 from matplotlib.colors import Normalize
-import tkinter
-from tkinter import filedialog
 import trackpy as tp
-from matplotlib.animation import ArtistAnimation, FuncAnimation, FFMpegWriter
-from scipy import stats
-import scipy.io
 import os
 
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
@@ -246,31 +235,16 @@ def trackmap(frame, traj, savedir=np.nan, filt=np.nan, yes_traj=True):
         stack = np.stack(figlist)
         tf.imwrite(savedir+os.sep+'movie.tif', stack)
     
-
-
-        
-
-
-
-def average_profile(defect_char, img, f, R):
-    table = defect_char[defect_char['charge']==0.5]
-    th_list = []
-    ref = False
-    for i in range(len(table)):
-        orientation, coherence, ene, X, Y = OPy.orientation_analysis(img[table['frame'].iloc[i]], sigma=round(1.5*f), binning=round(f/4), plotf=False)
-        # print(orientation.shape)
-        # print(X.shape)
-        # print(table['x'].iloc[i])
-        # print(table['y'].iloc[i])
-        e, err_e, costmin, theta_unit = can.one_defect_anisotropy(orientation, R=R, xc=table['x'].iloc[i]/2, yc=table['y'].iloc[i]/2, axis = table['axis'].iloc[i], plotit=ref)
-        ref = False
-        #phi, theta_unit = fan.compute_angle_diagram(orientation, R, center=(, ), axis=)
-        th_list.append(theta_unit)
+def plot_indexed_map(data, plotimg = []):
+    f = plt.figure()
+    plt.imshow(plotimg, cmap='gray')
+    traj = data['particle']
+    trajlist = np.unique(traj)
+    for i in range(len(trajlist)):
+        plt.plot(data['x'][traj==trajlist[i]], data['y'][traj==trajlist[i]])
+        xlast = (data['x'][traj==trajlist[i]]).to_numpy()[-1]
+        ylast = (data['y'][traj==trajlist[i]]).to_numpy()[-1]
+        plt.annotate(str(trajlist[i]), (xlast+1, ylast+1), color=plt.gca().lines[-1].get_color())
     
-    theta = np.arctan2(np.nanmean(np.sin(th_list), axis=0), np.nanmean(np.cos(th_list), axis=0))
-    return e, theta
+    return f
 
-
-
-if __name__ == "__main__":
-    keep = detect_defect_GUI()
