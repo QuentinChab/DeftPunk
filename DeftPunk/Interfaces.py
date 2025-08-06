@@ -26,7 +26,6 @@ import DeftPunk.Analysis as an
 import DeftPunk.GUI_utils as gu
 import tifffile as tf
 from matplotlib import cm
-import matplotlib.patheffects as pe
 from matplotlib.colors import Normalize
 import tkinter
 from tkinter import filedialog
@@ -379,13 +378,8 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     ###################" Buttons creation #############################""
     
     ## helper to create a button
-    def create_button(fig, x_pos, text, func):
-        button_ax = fig.add_axes([x_pos, 0.025, 0.1, 0.04])
-        new_button = Button(button_ax, text, hovercolor='0.975')
-        new_button.on_clicked(func)
-        return new_button
     
-
+    
     ## update functions for buttons
     def reset(event):
         w_slider.reset()
@@ -484,14 +478,14 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         else:
             print('Saving cancelled')
         plt.close(figsave)
-      
+
     ## create the buttons
-    reversebutton = create_button(fig, 0.05, 'Invert Color', invert_color)
-    resetbutton   = create_button(fig, 0.5, 'Reset', reset)
-    OKbutton      = create_button(fig, 0.8, 'OK', finish)
-    Fieldbutton   = create_button(fig, 0.2, 'Director', plotField)
-    Circlebutton  = create_button(fig, 0.35, 'R-Detection', plotR)
-    Savebutton    = create_button(fig, 0.65, 'Save Image', ClickSave)
+    reversebutton = gu.create_button(fig, [0.05, 0.025, 0.1, 0.04], 'Invert Color', invert_color)
+    resetbutton   = gu.create_button(fig, [0.5, 0.025, 0.1, 0.04], 'Reset', reset)
+    OKbutton      = gu.create_button(fig, [0.8, 0.025, 0.1, 0.04], 'OK', finish)
+    Fieldbutton   = gu.create_button(fig, [0.2, 0.025, 0.1, 0.04], 'Director', plotField)
+    Circlebutton  = gu.create_button(fig, [0.35, 0.025, 0.1, 0.04], 'R-Detection', plotR)
+    Savebutton    = gu.create_button(fig, [0.65,0.025, 0.1, 0.04], 'Save Image', ClickSave)
     
     
     ########################### End of function ##########################
@@ -511,58 +505,63 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
 def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     """
-    From defect data (location, frame,..), perform defect tracking with parameter tuning.
+    From defect data (location, charge and frame), perform defect tracking with parameter tuning.
 
+    > defect_char, track_param, _ = check_tracking(imgpath, deftab_)
+    
+    There are 3 parts for this function:
+        1. Initialization
+        2. Buttons creation
+        3. Sliders creation
+    All the logic is done within sliders and buttons
+    
+    
     Parameters
     ----------
     imgpath : str
         Path to image from which detection is performed.
     deftab_ : Pandas DataFrame
-        Contains defect information. We need location, charge, frame.
+        Contains defect information. 
+        Minimally, the fields 'frame', 'x', 'y' and 'charge' must be included.
     track_param : size-3 array, optional
         Initial tracking parameters. The default is [None, None, 0].
 
     Returns 
     -------
     deftab : Pandas DataFrame
-        Defect informations, to which the 'particle' column has been added or
-        filled with trajectory id.
+        Defect informations from deftab, to which the field 'particle' is added
+        (or updated) with trajectory OD
     track_param : size-3 iterable
         Contains selected tracking parameters
     refs : list of refecrences
         contains the references to sliders and buttons, for interactivity.
 
     """
-    # objects to be updated and kept along the function execution
-    global quiver_artist
-    global quiverM1
-    global quiverM2
-    global quiverM3
-    global traj_artist
-    global loop
+    ##################### Initialization #################################
+    
+    # global for cross GUI communication
     global defect_char
-    global deftab_raw
+    
+    # objects to be updated and kept along the function execution
+    quiver_artist   = []
+    quiverM1        = []
+    quiverM2        = []
+    quiverM3        = []
+    traj_artist     = []
     
     # get the parameters
     searchR = track_param[0]
-    memory = track_param[1]
-    filt = track_param[2]
-    loop = False
+    memory  = track_param[1]
+    filt    = track_param[2]
+    loop    = False
     
     # load the stack
-    if imgpath[-3:]=='tif':
-        img_st = tf.imread(imgpath)
-    else:
-        img_st = plt.imread(imgpath)
+    img_st, _, _ = gu.load_image(imgpath)
+    img = img_st[0]
     
     # create temporary tables to modify the files
     deftab_raw = deftab_
     defect_char = deftab_raw
-    
-    # if it is a multichannel image (color), take the first channel 
-    if img_st.ndim>3:
-        img_st = img_st[:,0,:,:] #if we have several intensity channels take the first one
-    img = img_st[0,:,:]
 
     fig =  plt.figure()
     
@@ -586,42 +585,34 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     defect_char = pd.concat([ptab, mtab, otab])
     defect_char = defect_char.reset_index(drop=True)
     
-    ############# Buttons  ##################
-    # Start Animation #
     
-    loopax = fig.add_axes([0.6, 0.2, 0.3, 0.07])
-    loopbutton = CheckButtons(loopax, ["Loop movie"])
+    ######################### Buttons  ##################################
+    # Upatdes functions #
     
-    startax = fig.add_axes([0.6, 0.375, 0.3, 0.07])
-    startbutton = Button(startax, 'Preview video', hovercolor='0.975')
-    dataax = fig.add_axes([0.6, 0.55, 0.3, 0.07])
-    databutton = Button(dataax, 'Save Dataset', hovercolor='0.975')
-    movieax = fig.add_axes([0.6, 0.725, 0.3, 0.07])
-    moviebutton = Button(movieax, 'Save movie', hovercolor='0.975')
-    okax = fig.add_axes([0.6, 0.9, 0.3, 0.07])
-    okbutton = Button(okax, 'OK', hovercolor='0.975')
-    
-    
+    # Does the displayed animation loops?
     def checkloop(event):
-        global loop
+        nonlocal loop
         loop = not loop
     
+    # Creates a window animating the stack with overlayed trajectories
     def Start_Animation(event):
-        global quiver_artist
-        global quiverM1
-        global quiverM2
-        global quiverM3
-        global traj_artist
-        global loop
-        #plt.figure()
+        nonlocal quiver_artist
+        nonlocal quiverM1
+        nonlocal quiverM2
+        nonlocal quiverM3
+        nonlocal traj_artist
+        nonlocal loop
+        
         figA, axA = plt.subplots()
+        
         # start with drawing 1st frame
         img_artist = axA.imshow(img_st[0,:,:], cmap='binary', animated=True)
         
         # take info from frame 0
         defframe = defect_char[defect_char['frame']==0]
         
-        # for plus and minus defects, get informations from table
+        # for plus and minus defects, get informations from table and plot defect arrows
+        # +1/2 first
         lim = 0.5
         e_map = 'PiYG'
         colorm = plt.get_cmap(e_map)
@@ -631,6 +622,7 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         c = colorm(np.array(defP['Anisotropy'])/2/lim+0.5)
         quiver_artist = axA.quiver(centroidsP[:,1], centroidsP[:,0], np.cos(axisP), np.sin(axisP), angles='xy', color=c, edgecolor='k', linewidth=1)
         
+        # -1/2 then
         defM = defframe[defframe['charge']==-0.5]
         centroidsM = np.array([defM['y'], defM['x']]).transpose()
         axisM = np.array(defM['axis'])
@@ -638,17 +630,19 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         quiverM1 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM), np.sin(axisM), angles='xy', color=minuscolor)
         quiverM2 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM+2*np.pi/3), np.sin(axisM+2*np.pi/3), angles='xy', color=minuscolor)
         quiverM3 = axA.quiver(centroidsM[:,1], centroidsM[:,0], np.cos(axisM-2*np.pi/3), np.sin(axisM-2*np.pi/3), angles='xy', color=minuscolor)
+        
         plt.colorbar(cm.ScalarMappable(norm=Normalize(-lim, lim), cmap=e_map), ax=axA, label='Splay-Bend Anisotropy []')
         
         # initialize lists for trajectory plotting
+        # At each iteration it will fill up with current-frame points
         if len(defect_char):
-            trajdata_x = [ [] for _ in range(int(np.max(defect_char['particle'])+1)) ]
+            trajdata_x = [ [] for _ in range(int(np.max(defect_char['particle'])+1)) ] # axis 0: trajectory number, axis 1: x-coord of each point in the trajectory up to now
             trajdata_y = [ [] for _ in range(int(np.max(defect_char['particle'])+1)) ]
             traj_artist = [None]*int(np.max(defect_char['particle']+1))
         else:
             traj_artist = []
-            
-        defpart = np.array(np.unique(defframe['particle']), dtype=int)
+        
+        defpart = np.array(np.unique(defframe['particle']), dtype=int) # list of trajectories
         # append to the list from the data of the frame 0 
         for i in range(len(defpart)):
             trajdata_x[defpart[i]].append(defframe['x'][defframe['particle']==defpart[i]].iloc[0])
@@ -658,13 +652,13 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         for i in range(len(traj_artist)):
             traj_artist[i], = axA.plot([], [])
 
-        
-        def update(frame): # for this animation, the next frame is updated from current frame
-            global quiver_artist
-            global quiverM1
-            global quiverM2
-            global quiverM3
-            global traj_artist
+        # At each new frame, the animation applies the update function to previous frame
+        def update(frame): 
+            nonlocal quiver_artist
+            nonlocal quiverM1
+            nonlocal quiverM2
+            nonlocal quiverM3
+            nonlocal traj_artist
             
             # current image is the frame number `frame`
             img_artist.set_array(img_st[frame,:,:])
@@ -713,35 +707,14 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         
         ## Start the animation
         # FuncAnimation make an animation from a figure and an update function
+        # the loop on each frame is hidden in the function
         ani[0] = FuncAnimation(figA, update, frames=range(len(img_st)), interval=5, blit=False, repeat=loop)#loopbutton.get_active())
-        
-        # while plt.fignum_exists(figA.number):
-        #     plt.pause(0.1)
     
-    startbutton.on_clicked(Start_Animation)
     
-    def save_data(event):
-        # call browser for user to select save path
-        root = tkinter.Tk()
-        root.withdraw()
-        root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
-        fold = filedialog.asksaveasfilename(defaultextension='.csv') # the user choses a place in file explorer
-        root.destroy()
-        
-        if fold:
-            defect_char.to_csv(fold) # the DataFrame is saved as csv
-            # parameters are stored in a txt file
-            paramfile = fold[:-4] + '_parameters.txt'
-            now_ = datetime.datetime.now()
-            with open(paramfile, "a") as f:
-                f.write('At '+str(now_))
-                f.write('\nsearch range = %.0f '%(track_param[0])+' px')
-                f.write('\nmemory = %.0f '%(track_param[1]) + ' frames')
-                f.write('\nfilter (minimum trajectory length) = %.0f '%(track_param[2])+' frames')
-            print('Data saved')
-        else:
-            print('Saving cancelled')
+    def save_data(event):        
+        gu.datasave(defect_char, None, track_param)
     
+    # Save the movie as a tif stack (Save Movie button)
     def save_movie(event):
         # call a browser
         root = tkinter.Tk()
@@ -766,14 +739,19 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         track_param[2] = sliders[2].val
         is_open = False
         plt.close(fig)
+
     
+    # Button creation
+    loopax = fig.add_axes([0.6, 0.2, 0.3, 0.07])
+    loopbutton = CheckButtons(loopax, ["Loop movie"])
     loopbutton.on_clicked(checkloop)
-    databutton.on_clicked(save_data)
-    moviebutton.on_clicked(save_movie)
-    okbutton.on_clicked(finish)
     
+    startbutton = gu.create_button(fig, [0.6, 0.35, 0.3, 0.07], 'Preview video', Start_Animation)
+    databutton  = gu.create_button(fig, [0.6, 0.5, 0.3, 0.07], 'Save Dataset', save_data)
+    moviebutton = gu.create_button(fig, [0.6, 0.65, 0.3, 0.07], 'Save Movie', save_movie)
+    okbutton    = gu.create_button(fig, [0.6, 0.8, 0.3, 0.07], 'OK', finish)
     
-    ########## sliders #############
+    ########################## Sliders #################################
     slider_axes = []
     sliders     = []
     names       = ["Max skipped\n frames", "search\n range", "Filter small\n trajectories"]
@@ -798,22 +776,24 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     
     def change_tracking(val): # update function for the 3 sliders
         global defect_char
-        global deftab_raw
+        nonlocal deftab_raw
         tp.quiet()
         
         #### Perform 3 tracking, for -1/2, +1/2 and others
+        # split dataset in 3
         ptab = deftab_raw[deftab_raw['charge']==0.5]
         mtab = deftab_raw[deftab_raw['charge']==-0.5]
         otab = deftab_raw[np.abs(deftab_raw['charge'])!=0.5]
         
-        
+        # independent tracking
         if len(ptab)>0:
             ptab = tp.link(ptab, search_range=sliders[1].val, memory=sliders[0].val)
         if len(mtab)>0:
             mtab = tp.link(mtab, search_range=sliders[1].val, memory=sliders[0].val)
         if len(otab)>0:
             otab = tp.link(otab, search_range=sliders[1].val, memory=sliders[0].val)
-
+        
+        # merge datasets again
         deftab_raw = pd.concat([ptab, mtab, otab])
         
         # # prevent the particle number to be redundant when tables are merged again
@@ -838,10 +818,9 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     for s in sliders:
         s.on_changed(change_tracking)
     
-    # This stops execution until detection is finished.
-    # It makes the function blink but I need it otherwise return deftab is not correct
-    # (it return the tracking with initial parameters and not chosen ones)
-    # Working on a solution
+    # If there are problems retrieving the correct data uncomment this
+    # the window will blink but it will stop execution of everything else the
+    # time for the user to make selection
     # while is_open:
     #     fig.canvas.flush_events()
     #     plt.pause(0.1)
@@ -852,20 +831,27 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     """
     Interface that allows to load an image and call the different other
     interfaces that performs detection etc.
+    You can load an image, but also a previously computed dataset.
     
     You can simply call:
     _ = detect_defect_GUI()
     
+    The function is organized as follow:
+        1. Initialization
+        2. Slider creation
+        3. Buttons creation
+        4. Creation of TextBoxes for units
+    
     Parameters
     ----------
     f_in : numeral, optional
-        Initial feature size to perform defect analysis. The default is 15.
+        In pixel, initial feature size to perform defect analysis. The default is 15.
     R_in : numeral, optional
-        Initial detection radius to perform defect analysis. The default is 10.
+        In pixel, initial detection radius to perform defect analysis. The default is 10.
     fname_in : string, optional
-        Path to image to analyze. The default is None. Then the user can chose it.
+        Path to image to analyze. The default is None, which calls a browser for the user to select a file. 
     frame_in : int, optional
-        Initial frame to analyze. The default is 0. Can be modified.
+        Initial frame to analyze. The default is 0. Can be modified inside the interface.
     
     Returns
     ---------
@@ -895,57 +881,51 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         Applies a set a basic statistics. See documentation for stat_me.
 
     """
-    global filename
-    global defect_char
-    global stack
-    global img
-    global track_param    
-    global det_param
-    vfield = None
     
-    defect_char = pd.DataFrame()
-    det_param = [f_in, R_in, 0.8]
-    track_param = [4, 30, 0]
-    stack = False
-    unit = 'px'
-    unit_per_px = 1
-    unit_t = 'frame'
+    ##################### Initialization ####################################
+    
+    # for cross-GUI communication
+    global defect_char
+    
+    # parameters
+    vfield = None
+    defect_char    = pd.DataFrame()
+    det_param      = [f_in, R_in, 0.8]
+    track_param    = [4, 30, 0]
+    stack          = False
+    unit           = 'px'
+    unit_per_px    = 1
+    unit_t         = 'frame'
     unit_per_frame = 1
     
     keep = [None] # will store reference of interfaces
     
     filename = fname_in
     
+    # display
     fig, ax = plt.subplots()
     
-    # mng = plt.get_current_fig_manager()
-    # mng.window.showMaximized()
-
+    # diplayed figure
     if not filename is None:
         img, stack, _ = gu.load_image(filename)
         ax.imshow(img, cmap='binary')
     else:
-        img = plt.imread('DeftPunk'+os.sep+'GUI_images'+os.sep+'spot_defect.jpg')
+        img = plt.imread('DeftPunk'+os.sep+'GUI_images'+os.sep+'spot_defect.jpg') # the welcome image (currently a meme)
         ax.imshow(img, cmap='binary')
     plt.title('Image displayed for\n parameter choice')
-    plt.subplots_adjust(bottom=0.2, left=0.4, right=0.8)  # Leave space for the button
-    # buttons: load image // launch detection // check tracking // save // apply on other image
-    # Display: frame_th image of laoded dataset
     
-    loadax = fig.add_axes([0.05, 0.8, 0.25, 0.07])
-    loadbutton = Button(loadax, 'Load', hovercolor='0.975')
-    detax = fig.add_axes([0.05, 0.7, 0.25, 0.07])
-    detbutton = Button(detax, 'Start Detection', hovercolor='0.975')
-    trackax = fig.add_axes([0.05, 0.6, 0.25, 0.07])
-    trackbutton = Button(trackax, 'Check tracking', hovercolor='0.975')
-    saveax = fig.add_axes([0.05, 0.5, 0.25, 0.07])
-    savebutton = Button(saveax, 'Save Data', hovercolor='0.975')
-    dirax = fig.add_axes([0.05, 0.4, 0.25, 0.07])
-    dirbutton = Button(dirax, 'Apply on\n directory', hovercolor='0.975')
-    statax = fig.add_axes([0.05, 0.3, 0.25, 0.07])
-    statbutton = Button(statax, 'Statistics', hovercolor='0.975')
-     
     
+    plt.subplots_adjust(bottom=0.2, left=0.4, right=0.8)  # Leave space for the buttons and slider
+    
+    
+    
+    ##################### Slider creation ##################################
+    
+    def update_img(event):
+        if stack:
+            if not filename is None:
+                ax.imshow(img[frame_slider.val,:,:], cmap='binary')
+                fig.canvas.draw_idle()
     
     axframe = fig.add_axes([0.25, 0.1, 0.65, 0.03])
     frame_slider = Slider(
@@ -957,6 +937,13 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         valstep=1
     )
     
+    
+    frame_slider.on_changed(update_img)
+    
+    ######################### Buttons creation ##############################    
+    ## Update functions
+    
+    # change slider values when a new image is loaded (!= number of frames)
     def update_valmax(new_valmax):
         frame_slider.valmax = new_valmax  # Update the valmax attribute
         frame_slider._stop = new_valmax  # Update the internal _stop value
@@ -965,11 +952,12 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         frame_slider.set_val(frame_slider.val)  # Update the slider's value
         frame_slider.ax.figure.canvas.draw_idle()  # Redraw the slider
     
+    # load image, or dataset, or possibly other usefull data
     def load_movie(event):
-        global filename
-        global stack
-        global img
         global defect_char
+        nonlocal filename
+        nonlocal stack
+        nonlocal img
         nonlocal vfield
         nonlocal unit
         nonlocal unit_per_px
@@ -1015,9 +1003,9 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         
     def detection(event):
         global defect_char
-        global track_param
+        nonlocal track_param
         nonlocal vfield
-        global det_param
+        nonlocal det_param
         if (filename is None) and (vfield is None):
             print('Load an image first!')
         else:
@@ -1029,7 +1017,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
             
     def check_track(event):
         global defect_char
-        global track_param
+        nonlocal track_param
         if len(defect_char)>0:
             defect_char, track_param, ref = check_tracking(filename, defect_char, track_param=track_param)#searchR=track_param[1], memory=track_param[0], filt=track_param[2])
             #print(track_param)
@@ -1076,11 +1064,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
             print('Saving cancelled')
        
     
-    def update_img(event):
-        if stack:
-            if not filename is None:
-                ax.imshow(img[frame_slider.val,:,:], cmap='binary')
-                fig.canvas.draw_idle()
+    
     
     
     def on_directory(event):
@@ -1185,6 +1169,17 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         if stack:
             an.motility_analysis(defect_char, dt=1, unit_per_frame=unit_per_frame, unit_t = unit_t, unit_per_px = unit_per_px, unit_space = unit)
     
+    ## create buttons
+    loadbutton  = gu.create_button(fig, [0.05, 0.8, 0.25, 0.07], 'Load', load_movie)
+    detbutton   = gu.create_button(fig, [0.05, 0.7, 0.25, 0.07], 'Start Detection', detection)
+    trackbutton = gu.create_button(fig, [0.05, 0.6, 0.25, 0.07], 'Check_tracking', check_track)
+    savebutton  = gu.create_button(fig, [0.05, 0.5, 0.25, 0.07], 'Save Data', savedat)
+    dirbutton   = gu.create_button(fig, [0.05, 0.4, 0.25, 0.07], 'Apply on\n directory', on_directory)
+    statbutton  = gu.create_button(fig, [0.05, 0.3, 0.25, 0.07], 'Statistics', stat_func)
+    
+    
+    ##################### Unit boxes creation ###############################
+    
     textspaceax = fig.add_axes([0.85, 0.85, 0.12, 0.07])
     textspaceax.axis('off')
     textspaceax.text(0, 0, 'Space\nUnit')
@@ -1218,14 +1213,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     unittBox.on_submit(set_unit_t)
     fpsBox.on_submit(set_unit_per_frame)
     
-    detbutton.on_clicked(detection)
-    trackbutton.on_clicked(check_track)
-    savebutton.on_clicked(savedat)
-    loadbutton.on_clicked(load_movie)
-    dirbutton.on_clicked(on_directory)
-    frame_slider.on_changed(update_img)
-    statbutton.on_clicked(stat_func)
-    
+
     plt.show()
     # while plt.fignum_exists(fig.number):
     #     plt.pause(0.1)

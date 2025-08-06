@@ -11,6 +11,13 @@ import matplotlib.pyplot as plt
 import matplotlib.patheffects as pe
 from matplotlib.colors import Normalize
 from matplotlib import cm
+from matplotlib.widgets import Button
+
+def create_button(fig, ax_pos, text, func):
+    button_ax = fig.add_axes(ax_pos)
+    new_button = Button(button_ax, text, hovercolor='0.975')
+    new_button.on_clicked(func)
+    return new_button
 
 def update_display(pos, fig, art_vec, R_vec, field, ax, R, dchar, bin_, fieldcolor='navy'):
     ### update display

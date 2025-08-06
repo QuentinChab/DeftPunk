@@ -67,46 +67,49 @@ def load_image(imgpath, channel=0):
     return img, stack, units
 
 def datasave(dchar, d_param, t_param=None, units=[1, 'px', 1, 'frame'], savedir=None):
-    
-    if savedir is None:
-        root = tkinter.Tk()
-        root.withdraw()
-        root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
-        fold = tkinter.filedialog.asksaveasfilename(defaultextension='.csv')
-        root.destroy()
+    if (d_param is None) and (t_param is None):
+        print('No data provided to save')
     else:
-        fold = savedir
         
-    
-    if fold:
-        unit_per_px, unit, unit_per_frame, unit_t = units
-        
-        
-        #re-index particle column so that it is not absurd
-        if 'particle' in dchar.columns:
-            defect_char_to_save = tp.filter_stubs(dchar, t_param[2])
-            part_vec = defect_char_to_save['particle'].to_numpy()
-            part_list = np.unique(part_vec)
-            for i in range(len(part_list)):
-                defect_char_to_save.loc[part_vec==part_list[i], 'particle']=i
+        if savedir is None:
+            root = tkinter.Tk()
+            root.withdraw()
+            root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
+            fold = tkinter.filedialog.asksaveasfilename(defaultextension='.csv')
+            root.destroy()
         else:
+            fold = savedir
             
-            defect_char_to_save = dchar
         
-        defect_char_to_save.to_csv(fold)
-        
-        paramfile = '.'.join(fold.split('.')[:-1]) + '_parameters.txt'
-        now_ = datetime.datetime.now()
-        with open(paramfile, "a") as f:
-            f.write('At '+str(now_))
+        if fold:
+            unit_per_px, unit, unit_per_frame, unit_t = units
             
-            f.write('\nfeature size = %.0f '%(d_param[0]*unit_per_px)+unit)
-            f.write('\nnematic order threshold = %.2f '%(d_param[2]))
-            f.write('\nDetection Radius = %.0f '%(d_param[1]*unit_per_px)+unit)
-            if not (t_param is None):
-                f.write('\nsearch range = %.0f '%(t_param[0]*unit_per_px)+unit)
-                f.write('\nmemory = %.0f '%(t_param[1]*unit_per_frame) + unit_t)
-                f.write('\nfilter (minimum trajectory length) = %.0f '%(t_param[2]*unit_per_frame)+unit_t)
-        print('Data Saved')
-    else:
-        print('Saving cancelled')
+            
+            #re-index particle column so that it is not absurd
+            if 'particle' in dchar.columns:
+                defect_char_to_save = tp.filter_stubs(dchar, t_param[2])
+                part_vec = defect_char_to_save['particle'].to_numpy()
+                part_list = np.unique(part_vec)
+                for i in range(len(part_list)):
+                    defect_char_to_save.loc[part_vec==part_list[i], 'particle']=i
+            else:
+                
+                defect_char_to_save = dchar
+            
+            defect_char_to_save.to_csv(fold)
+            
+            paramfile = '.'.join(fold.split('.')[:-1]) + '_parameters.txt'
+            now_ = datetime.datetime.now()
+            with open(paramfile, "a") as f:
+                f.write('At '+str(now_))
+                if not d_param is None:
+                    f.write('\nfeature size = %.0f '%(d_param[0]*unit_per_px)+unit)
+                    f.write('\nnematic order threshold = %.2f '%(d_param[2]))
+                    f.write('\nDetection Radius = %.0f '%(d_param[1]*unit_per_px)+unit)
+                if not (t_param is None):
+                    f.write('\nsearch range = %.0f '%(t_param[0]*unit_per_px)+unit)
+                    f.write('\nmemory = %.0f '%(t_param[1]*unit_per_frame) + unit_t)
+                    f.write('\nfilter (minimum trajectory length) = %.0f '%(t_param[2]*unit_per_frame)+unit_t)
+            print('Data Saved')
+        else:
+            print('Saving cancelled')
