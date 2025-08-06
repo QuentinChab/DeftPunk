@@ -23,6 +23,7 @@ from matplotlib.widgets import Button, Slider, CheckButtons, TextBox
 import pandas as pd
 from DeftPunk import processing as pc
 import DeftPunk.Analysis as an
+import DeftPunk.GUI_utils as gu
 import tifffile as tf
 from matplotlib import cm
 import matplotlib.patheffects as pe
@@ -37,92 +38,6 @@ origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 
 bin_factor = 4
-
-def update_display(pos, fig, art_vec, R_vec, field, ax, R, dchar, bin_, fieldcolor='navy'):
-    ### update display
-    R_vis = False # are contours of anisotropy computation drawn?
-    vis = art_vec[0].get_visible() # 
-    
-    # Remove all previous display
-    art_vec[0].remove()
-    for i in range(1,len(art_vec)):
-        if not (art_vec[i] is None):
-            art_vec[i].remove()
-        if not (R_vec[i-1] is None):
-            R_vec[i-1].remove()
-            R_vis = R_vec[i-1].get_visible()
-    
-    # Draw director field
-    art_vec[0] = ax.quiver(pos[0], pos[1], np.cos(field), np.sin(field), angles='xy', pivot='mid', headlength=0, headaxislength=0, scale_units='xy', scale=1/bin_ , color=fieldcolor, visible=vis)
-    # draw defects
-    art_vec_new,R_vec_new = draw_defects(ax, dchar, R=R, R_vis=R_vis)
-    # Add all those objects to a list that is kept
-    for i in range(1, max(len(art_vec), len(art_vec_new)+1)):
-        if i>=len(art_vec):
-            art_vec.append(art_vec_new[i-1])
-            R_vec.append(R_vec_new[i-1])
-        elif i>=len(art_vec_new)+1:
-            art_vec[i] = None
-            R_vec[i-1] = None
-        else:
-            art_vec[i] = art_vec_new[i-1]
-            R_vec[i-1] = R_vec_new[i-1]
-            
-    fig.canvas.draw_idle()
-
-
-
-def load_image(imgpath, channel=0):
-    if imgpath is None:
-        return None, False, []
-    
-    if not os.path.exists(imgpath):
-        raise FileNotFoundError(f"Image not found: {imgpath}")
-    
-    extension = imgpath.split('.')[-1]
-    
-    units = [1, 'px', 1, 'frame'] # default units
-    stack = False
-    if extension in ['tif', 'tiff']:
-        # Read TIFF metadata using TiffFile
-        with tf.TiffFile(str(imgpath)) as tif:
-            axes = tif.series[0].axes  # E.g., "TZCYX"
-            img = tif.asarray()
-            # If T it's a time stack, if Z it's a z-stack
-            stack = 'T' in axes or 'Z' in axes
-            
-            # determine if units are stored in the metadata
-            # I use the try statement because if this fail the rest of the code works just fine
-            if tif.imagej_metadata:
-                try:
-                    units[1] = tif.imagej_metadata['unit']
-                except:
-                    flipiti_useless_statement = 90 # Except cannot be empty
-                try:
-                    unitt = tif.imagej_metadata['time unit']
-                    units[3] = unitt
-                    units[2] = tif.imagej_metadata['finterval']
-                except:
-                    unitt=1 # blank statement for the required except keyword
-            xres = tif.pages[0].tags.get('XResolution')
-            if xres:
-                xres = xres.value
-                units[0] = xres[1]/xres[0]
-    
-    # handle other extension
-    elif extension in ['gif', 'npz', 'npy']:
-        raise NotImplementedError(f"{extension} format is not supported. Try tif, png, or a matplotlib-supported format.")            
-    else: # png, jpg, bmp, automatically not stack
-        img = plt.imread(imgpath)
-        
-    # reduce dimension if it is a multichannel image
-    if len(img.shape)>2+stack:
-        if channel==0: # 0 codes for averaging channels
-            img = np.mean(img, axis=-1)
-        else: # otherwise the channel can be selected
-            img = img[::,channel]
-    
-    return img, stack, units
 
 
 def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='px', vfield=None, endsave=True, savedir='Select'):
@@ -262,7 +177,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     else:
         lock_field = False
      
-    img_st, stack, _ = load_image(imgpath)
+    img_st, stack, _ = gu.load_image(imgpath)
     if stack:
         img = img_st[frame]
     else:
@@ -293,7 +208,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     
     ## Initial display 
     # Lists of objects. It will be use to change their visibility and remove them
-    art, R_vec = draw_defects(ax, defect_char, plot_cbar=True)
+    art, R_vec = gu.draw_defects(ax, defect_char, plot_cbar=True)
     
     # art_vec has vector field in index 0, then arrows and annotations
     art_vec = [qline, *art]
@@ -399,7 +314,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         my_field[0] = field
         my_field[1] = pos
         
-        update_display(pos, fig, art_vec, R_vec, field, ax, R_slider.val, dchar, bin_)
+        gu.update_display(pos, fig, art_vec, R_vec, field, ax, R_slider.val, dchar, bin_)
     
     # update function for detection radius. Only anisotropy is changed
     def update_R(val):
@@ -424,7 +339,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
         
         # update display
-        update_display(pos, fig, art_vec, R_vec, vfield, ax, R_slider.val, defect_char, bin_)
+        gu.update_display(pos, fig, art_vec, R_vec, vfield, ax, R_slider.val, defect_char, bin_)
         
     # update function for order_threshold. Defect detection is changed but not 
     # director field computation 
@@ -451,7 +366,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         my_field[1] = pos
         
         # get previous visibility info
-        update_display(pos, fig, art_vec, R_vec, vfield, ax, R_slider.val, dchar, bin_)
+        gu.update_display(pos, fig, art_vec, R_vec, vfield, ax, R_slider.val, dchar, bin_)
     
     
     
@@ -492,21 +407,6 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         det_param[1] = R_slider.val
         det_param[2] = Thresh_slider.val
         
-        class Placeholder: # just to be able to use fold.name line if savedir is input by the user
-            def __init__(self, n):
-                self.name = n
-        
-        if endsave:
-            if savedir=='Select':
-                print('Where to save the data?')
-                root = tkinter.Tk()
-                root.withdraw()  # Hide the empty main window
-                root.call('wm', 'attributes', '.', '-topmost', '1') 
-                # this function opens a browser and fold contains the saving path
-                fold = filedialog.asksaveasfile(defaultextension='.csv') # the user choses a place in file explorer
-                root.destroy()
-            else:
-                fold = Placeholder(savedir+os.sep+'data.csv')
         
         
         sigma = round(1.5*w_slider.val) #integration size for orientation field
@@ -520,21 +420,8 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         plt.close(fig)
         
         if endsave:
-            if not fold is None:
-                # save the DataFrame as csv
-                defect_char.to_csv(fold.name)
-                # Write in a txt file the parameters
-                paramfile = fold.name + '_parameters.txt'
-                now_ = datetime.datetime.now()
-                with open(paramfile, "a") as f:
-                    f.write('At '+str(now_))
-                    f.write('\nfeature size = %.0f '%(det_param[0]*um_per_px)+unit)
-                    f.write('\nnematic order threshold = %.2f '%(det_param[2]))
-                    f.write('\nDetection Radius = %.0f '%(det_param[1]*um_per_px)+unit)
-                    
-                print('Saved')
-            else:
-                print('Done')
+            # save function (table + txt with parameters)
+            gu.datasave(defect_char, det_param)
 
             
     
@@ -566,7 +453,9 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
 
     
     def ClickSave(event): # called by the save button
-        # create another figure
+        # save the current display
+        
+        # create first an identical image
         figsave, axsave = plt.subplots()
         plt.imshow(img, cmap='binary')
         # plot all visible features 
@@ -577,7 +466,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
             if not R_vec[i] is None:
                 R_vis = R_vec[i].get_visible()
                 break
-        draw_defects(axsave, defect_char, plot_cbar=True, R_vis=R_vis)
+        gu.draw_defects(axsave, defect_char, plot_cbar=True, R_vis=R_vis)
         
         # set the main figure display range
         axsave.set_xlim(ax.get_xlim())
@@ -959,104 +848,6 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     
     return defect_char, track_param, [loopbutton, databutton, moviebutton, okbutton, startbutton]
             
-def draw_defects(ax, all_data, frame=None, R=1, plot_cbar=False, animated=False, R_vis=False):
-    
-    """
-    Draw on ax the defects passed on defect_df
-
-    Parameters
-    ----------
-    ax : axes
-        Axis on which to draw the defects and annotations.
-    defect_df : DataFrame
-        Contains defects information. It minimally has the columns
-        'charge', 'Anisotropy', 'axis', 'x' and 'y'
-    plot_cbar : Bool, optional
-        Do you plot the colorbar? The default is False.
-
-    Returns
-    -------
-    artists_vec : list of Objects
-        Objects newly drawn on the ax. It does not include R-contour
-    R_vec : list of Objects
-        List of new R-contours.
-
-    """
-    # get xlim and ylim because changing axis will change display range
-    current_xlim = ax.get_xlim()
-    current_ylim = ax.get_ylim()
-    
-    this_phi = np.linspace(0, 2*np.pi, 30)
-    
-    if frame is None:
-        defect_df = all_data
-        Npart = 1
-    else:
-        defect_df = all_data[all_data['frame']==frame]
-        all_data = all_data[all_data['frame']<=frame]
-        Npart = len(np.unique(all_data['particle']))
-        
-    chargedef = np.array(defect_df['charge'])
-    centroids = np.array([defect_df['y'], defect_df['x']]).transpose()
-    es = np.array(defect_df['Anisotropy'])
-    axisdef = np.array(defect_df['axis'])
-    
-    # arrows and annotations will be stored in artists_vec
-    # length is Ndef + 2 artists per -1/2 defect, + 2 annotation per +1/2 + number of trajectories + colorbar
-    artists_vec = [None]*(len(chargedef)+2*np.sum(np.abs(chargedef+0.5)<0.1)+2*np.sum(np.abs(chargedef-0.5)<0.1)+Npart+plot_cbar)
-    R_vec = [None]*len(artists_vec)
-    
-    # because the number of objects in artists_def is higher than number of defects
-    lim = 0.5
-    e_map = 'PiYG'
-    colorm = plt.get_cmap(e_map)
-    incr = 0
-    for i in range(len(chargedef)):
-        if np.abs(chargedef[i]-1/2)<0.1:
-            c = colorm(es[i]/2/lim+0.5)
-            artists_vec[incr] = ax.annotate('%.2f'%(es[i]), (centroids[i,1], centroids[i,0]),
-                        color = c, fontsize='small', path_effects=[pe.withStroke(linewidth=1, foreground="k")])
-  
-            artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), angles='xy', color=c, edgecolor='k', linewidth=1)
-            R_vec[i] = ax.plot(centroids[i,1]+R*np.cos(this_phi), centroids[i,0]+R*np.sin(this_phi), 'r', visible=R_vis)[0]
-            incr += 3
-        elif np.abs(chargedef[i]+1/2)<0.1:
-            minuscolor = 'cornflowerblue'
-            artists_vec[incr] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), angles='xy', color=minuscolor)
-            artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]+2*np.pi/3), np.sin(axisdef[i]+2*np.pi/3), angles='xy', color=minuscolor)
-            artists_vec[incr+2] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]-2*np.pi/3), np.sin(axisdef[i]-2*np.pi/3), angles='xy', color=minuscolor)
-            incr+=3
-        elif np.abs(chargedef[i]+1)<0.1:
-            artists_vec[incr] = ax.plot(centroids[i,1], centroids[i,0], 'o', color = 'orange')
-            incr += 1
-        elif np.abs(chargedef[i]-1)<0.1:
-            artists_vec[incr] = ax.plot(centroids[i,1], centroids[i,0], 'o', color = 'purple')
-            incr += 1
-        else:
-            #plt.plot(centroids[i,1], centroids[i,0], 'o', color = cother)
-            incr+=1
-
-    if plot_cbar:
-        plt.colorbar(cm.ScalarMappable(norm=Normalize(-lim, lim), cmap=e_map), ax=ax, label='Splay-Bend Anisotropy []')
-        #incr += 1
-    
-    if not (frame is None):
-        trajs = np.unique(all_data['particle'])
-        for i in range(len(trajs)):
-            if not np.isnan(trajs[i]):
-                indices = all_data['particle']==trajs[i]
-                artists_vec[incr] = plt.plot(all_data['x'][indices], all_data['y'][indices], color='C%.0f'%(trajs[i]%10))
-        
-    # set back to old display range
-    new_xlim = ax.get_xlim()
-    new_ylim = ax.get_ylim()
-    if new_xlim[0]<current_xlim[0] or new_xlim[1]>current_xlim[1]: 
-        ax.set_xlim(current_xlim)
-    if new_ylim[0]>current_ylim[0] or new_ylim[1]<current_ylim[1]: 
-        ax.set_ylim(current_ylim)
-    
-    return artists_vec, R_vec
-
 def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     """
     Interface that allows to load an image and call the different other
@@ -1131,7 +922,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     # mng.window.showMaximized()
 
     if not filename is None:
-        img, stack, _ = load_image(filename)
+        img, stack, _ = gu.load_image(filename)
         ax.imshow(img, cmap='binary')
     else:
         img = plt.imread('DeftPunk'+os.sep+'GUI_images'+os.sep+'spot_defect.jpg')
@@ -1204,7 +995,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                 rho = dat['Rho']
                 psi = dat['Psi']
             else:
-                img, stack, units = load_image(fname)
+                img, stack, units = gu.load_image(fname)
                 filename = fname
                 vfield   = None
                 
@@ -1331,7 +1122,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                     imglist = []
                     for i in range(len(imgtmp)):
                         ax.imshow(imgtmp[i], cmap='gray')
-                        draw_defects(ax, defect_table, i, plot_cbar=(not i))
+                        gu.draw_defects(ax, defect_table, i, plot_cbar=(not i))
                         fig.canvas.draw()
                         imgarray = np.copy(np.array(fig.canvas.renderer.buffer_rgba())[..., :3])
                         imglist.append(imgarray)
@@ -1341,7 +1132,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                     plt.close(fig)
                 else:
                     plt.imshow(imgtmp, cmap='gray')
-                    draw_defects(ax, defect_table, 0, plot_cbar=True)
+                    gu.draw_defects(ax, defect_table, 0, plot_cbar=True)
                     fig.canvas.draw()
                     imgarray = np.array(fig.canvas.renderer.buffer_rgba())[..., :3]
                     plt.close(fig)
