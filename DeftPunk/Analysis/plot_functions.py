@@ -13,6 +13,7 @@ import tifffile as tf
 from matplotlib import cm
 import matplotlib.patheffects as pe
 from matplotlib.colors import Normalize
+from matplotlib.backends.backend_agg import FigureCanvasAgg
 import trackpy as tp
 import os
 

@@ -24,6 +24,7 @@ def update_display(pos, fig, art_vec, R_vec, field, ax, R, dchar, bin_, fieldcol
     R_vis = False # are contours of anisotropy computation drawn?
     vis = art_vec[0].get_visible() # 
     
+    
     # Remove all previous display
     art_vec[0].remove()
     for i in range(1,len(art_vec)):
@@ -48,7 +49,7 @@ def update_display(pos, fig, art_vec, R_vec, field, ax, R, dchar, bin_, fieldcol
         else:
             art_vec[i] = art_vec_new[i-1]
             R_vec[i-1] = R_vec_new[i-1]
-            
+    
     fig.canvas.draw_idle()
     
 def draw_defects(ax, all_data, frame=None, R=1, plot_cbar=False, animated=False, R_vis=False):
@@ -74,6 +75,11 @@ def draw_defects(ax, all_data, frame=None, R=1, plot_cbar=False, animated=False,
         List of new R-contours.
 
     """
+    
+    # if there is no defect there is no object to draw!
+    if not bool(len(all_data)):
+        return [], []
+    
     # get xlim and ylim because changing axis will change display range
     current_xlim = ax.get_xlim()
     current_ylim = ax.get_ylim()

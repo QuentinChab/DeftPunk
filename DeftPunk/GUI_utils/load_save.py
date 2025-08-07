@@ -71,7 +71,7 @@ def datasave(dchar, d_param, t_param=None, units=[1, 'px', 1, 'frame'], savedir=
         print('No data provided to save')
     else:
         
-        if savedir is None:
+        if (savedir is None) or (savedir=='Select'):
             root = tkinter.Tk()
             root.withdraw()
             root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)

@@ -13,7 +13,7 @@ import sys
 # function_directory = os.getcwd()
 # sys.path.append(function_directory+os.sep+'functions'+os.sep)
 
-from functions import analyze_image, get_anisotropy, trackmap
+from DeftPunk import analyze_image, get_anisotropy, trackmap
 
 ############################## USER PART ######################################
 

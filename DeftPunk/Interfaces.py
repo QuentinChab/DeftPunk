@@ -64,12 +64,13 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
                For example, for a cell monolayer, the width of a cell.
                It controls the director field computation and thus influences the whole detection process.
            - R : int or float
-               Radius of detection. Around a defect a contour is taken at distance R
-               and the director field is taken on this contour. This is used to 
-               compute defect anisotropy.
+               To compute anisotropy, a contour is defined around the defect, with radius R.
+               The director field is measured along the contour,
+               and the anisotropy is fitted on this profile.
            - order_threshold : float between 0 and 1
+               For detection of defects.    
                If there is a region with nematic order parameter inferior to 
-               order_threshold, we consider that a defect is present
+               order_threshold, we consider that a defect is present in this region
        stack : bool, optional
            If the image is a stack or not.
            Default is True
@@ -95,7 +96,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     Returns
        ----------
        defect_char : Pandas DataFrame
-           Contains all the informations of detected defects. The fields are
+           Contains all the informations on detected defects. The fields are
            'charge', 'axis', 'x', 'y', 'Anisotropy' and 'Error'.
            If the image is a stack we also have the fields
            'frame', 'MinDist', 'particle'
@@ -414,7 +415,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
         if endsave:
             # save function (table + txt with parameters)
-            gu.datasave(defect_char, det_param)
+            gu.datasave(defect_char, det_param, savedir=savedir)
 
             
     
@@ -541,7 +542,8 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     # global for cross GUI communication
     global defect_char
     
-    # objects to be updated and kept along the function execution
+    # The animation works by updating display
+    # These lists will contain the objects updated
     quiver_artist   = []
     quiverM1        = []
     quiverM2        = []
@@ -564,7 +566,7 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
 
     fig =  plt.figure()
     
-    #Initial slider value. /!\ DO NOT CORRESPOND NECESSARILY TO INITIAL TRACKING VALUES
+    #Initial slider value. It probably doesn't suit to all images.
     if searchR is None:
         if np.sum(np.logical_not(np.isnan(defect_char['MinDist'])))>2:
             searchR = 4*np.nanmean(defect_char['MinDist'])
@@ -573,7 +575,7 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     if memory is None:
         memory = max(round(len(np.unique(defect_char['frame']))/15), 2)
     
-    # This will contain the animation (in a list so it is modified inside functions)
+    # This will contain the animation
     ani = [None]
     
     #sort the defects according to charge
@@ -886,7 +888,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     # for cross-GUI communication
     global defect_char
     
-    # parameters
+    # initial parameters
     vfield = None
     defect_char    = pd.DataFrame()
     det_param      = [f_in, R_in, 0.8]
@@ -923,6 +925,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     def update_img(event):
         if stack:
             if not filename is None:
+                # channel 0 is for frame
                 ax.imshow(img[frame_slider.val,:,:], cmap='binary')
                 fig.canvas.draw_idle()
     
@@ -942,7 +945,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     ######################### Buttons creation ##############################    
     ## Update functions
     
-    # change slider values when a new image is loaded (!= number of frames)
+    # If a new image is loaded, the range of the frame slider has to change
     def update_valmax(new_valmax):
         frame_slider.valmax = new_valmax  # Update the valmax attribute
         frame_slider._stop = new_valmax  # Update the internal _stop value
@@ -962,15 +965,20 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         nonlocal unit_per_px
         nonlocal unit_t
         nonlocal unit_per_frame
+        
+        # Prepare the file explorer window
         root = tkinter.Tk()
         root.withdraw()
         root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
+        # ask the user to browse to select a file
         fname = filedialog.askopenfilename()
         root.destroy()
         
         if fname: 
+            # get image format (tif,...)
             extension = fname.split('.')[-1]
             
+            # 3 special cases: csv is interpreted as defect data table, npy and mat as director fields
             if extension=='csv':
                 defect_char = pd.read_csv(fname)
             elif extension=='npy':
@@ -981,7 +989,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                 y = dat['Y']
                 rho = dat['Rho']
                 psi = dat['Psi']
-            else:
+            else: # other cases are interpreted as images
                 img, stack, units = gu.load_image(fname)
                 filename = fname
                 vfield   = None
@@ -991,9 +999,11 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                 unittBox.set_val(units[3])
                 fpsBox.set_val(units[2])
                 uppxBox.set_val(units[0])
-                
+            
+            # change the dipslay according to loaded image
             if stack:
                 ax.imshow(img[frame_slider.val,:,:], cmap='binary')
+                # update frame slider
                 update_valmax(len(img))
             else:
                 ax.imshow(img, cmap='binary')
@@ -1008,75 +1018,46 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         if (filename is None) and (vfield is None):
             print('Load an image first!')
         else:
+            # call to the detection interface
             defect_char, det_param, field, ref = defect_analyzer(filename, det_param, stack=stack, frame=frame_slider.val, um_per_px=unit_per_px, unit=unit, vfield=vfield, endsave=False)
-            #vfield = field
+            # keep a reference to the buttons (in ref) so they stay active
             keep[0] = ref
         
-        
-            
+                   
     def check_track(event):
         global defect_char
         nonlocal track_param
         if len(defect_char)>0:
             defect_char, track_param, ref = check_tracking(filename, defect_char, track_param=track_param)#searchR=track_param[1], memory=track_param[0], filt=track_param[2])
-            #print(track_param)
+            # keep a reference to the buttons (in ref) so they stay active
             keep[0] = ref
-            #track_param = [track_param_0, track_param_0,track_param_0]
         else:
             print('You should perform detection first.')    
     
     def savedat(event):
-        root = tkinter.Tk()
-        root.withdraw()
-        root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
-        fold = filedialog.asksaveasfilename(defaultextension='.csv')
-        root.destroy()
-        
-        if fold:
-            
-            #re-index particle column so that it is not absurd
-            if 'particle' in defect_char.columns:
-                defect_char_to_save = tp.filter_stubs(defect_char, track_param[2])
-                part_vec = defect_char_to_save['particle'].to_numpy()
-                part_list = np.unique(part_vec)
-                for i in range(len(part_list)):
-                    defect_char_to_save.loc[part_vec==part_list[i], 'particle']=i
-            else:
-                
-                defect_char_to_save = defect_char
-            
-            defect_char_to_save.to_csv(fold)
-            
-            paramfile = fold[:-4] + '_parameters.txt'
-            now_ = datetime.datetime.now()
-            with open(paramfile, "a") as f:
-                f.write('At '+str(now_))
-                
-                f.write('\nfeature size = %.0f '%(det_param[0]*unit_per_px)+unit)
-                f.write('\nnematic order threshold = %.2f '%(det_param[2]))
-                f.write('\nDetection Radius = %.0f '%(det_param[1]*unit_per_px)+unit)
-                f.write('\nsearch range = %.0f '%(track_param[0]*unit_per_px)+unit)
-                f.write('\nmemory = %.0f '%(track_param[1]*unit_per_frame) + unit_t)
-                f.write('\nfilter (minimum trajectory length) = %.0f '%(track_param[2]*unit_per_frame)+unit_t)
-            print('Data Saved')
-        else:
-            print('Saving cancelled')
-       
+        gu.datasave(defect_char, det_param, track_param)   
     
-    
-    
-    
+    # The user select a directory and the detection is applied on each image found 
+    # /!\ it creates .csv with detection data with name [filename]_data.csv for each file
     def on_directory(event):
         nonlocal det_param
-        print('Apply the analysis with chosen parameters on a directory. Chose it!')
-        print(det_param)
+        print('Current detection parameters are feature_size=%.0f, order_threshold=%.2f and R=%.0f'%(det_param[0], det_param[2], det_param[1]))
+        if stack:
+            print('Current tracking parameters are search_range=%.0f, memory=%.0f and filter=%.0f'%(track_param[0], track_param[1], track_param[2]))
+        print('Select the directory on whoch the detection with those parameters will be applied.')
+        
+        # prepare file explorer window
         root = tkinter.Tk()
         root.withdraw()
         root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
+        # the user select a directory
         folder = filedialog.askdirectory()
         root.destroy()
+        
+        # define coupled parameters
         bin_ = round(det_param[0]/4)
         sigma = round(1.5*det_param[0])
+        
         #Loop over files
         for filename in os.listdir(folder):
             if filename.endswith('tif') or filename.endswith('png'):
