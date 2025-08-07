@@ -28,7 +28,7 @@ def dominant_direction(img, sigma):
     dom_ori = np.arctan2(2 * axy.mean(), (ayy.mean() - axx.mean())) / 2
     return np.rad2deg(dom_ori)
 
-def orientation_analysis(img, sigma, binning, plotf=False):    
+def orientation_analysis(img, sigma, binning, plotf=False, mode='pool'):    
     """Input
     img     = image or path to image
     sigma   = I think it refers to the size of the box on which you determine the direction
@@ -88,15 +88,30 @@ def orientation_analysis(img, sigma, binning, plotf=False):
     #     xbin-=1
     # while N[1]%ybin != 0:
     #     ybin-=1
+    
+    if mode=='pool':
+        # Pool instead of downsample
+        thx = skimage.measure.block_reduce(np.cos(2*ori), (binning, binning), func=np.mean)
+        thy = skimage.measure.block_reduce(np.sin(2*ori), (binning, binning), func=np.mean)
+        orientation = np.arctan2(thy, thx)/2 - np.pi/2
+        coherence = skimage.measure.block_reduce(coh, (binning, binning), func=np.mean)
+        W, H = orientation.shape
+        x_coords = np.arange(binning/2, H*binning, binning)
+        y_coords = np.arange(binning/2, W*binning, binning)
+        X, Y = np.meshgrid(x_coords, y_coords)  # Shape: (H//b, W//b)
+    elif mode=='downsample':
+        # In the image representation the axis are not the same as in plot representation 
+        x1 = round((xbin + N[0]-xbin*math.floor(N[0]/xbin))/2) # To be like OrientationJ. 
+        y1 = round((ybin + N[1]-ybin*math.floor(N[1]/ybin))/2)
+        xpos    = np.arange(y1,N[1], ybin)
+        ypos    = np.arange(x1,N[0], xbin)
+        X,Y     = np.meshgrid(xpos,ypos)
+        orientation = ori[x1::xbin,y1::ybin]-np.pi/2
+        coherence = coh[x1::xbin,y1::ybin] #binned coh array
+    else:
+        print('chose a mode between pool and downsample')
         
-    # In the image representation the axis are not the same as in plot representation 
-    x1 = round((xbin + N[0]-xbin*math.floor(N[0]/xbin))/2) # To be like OrientationJ. 
-    y1 = round((ybin + N[1]-ybin*math.floor(N[1]/ybin))/2)
-    xpos    = np.arange(y1,N[1], ybin)
-    ypos    = np.arange(x1,N[0], xbin)
-    X,Y     = np.meshgrid(xpos,ypos)
-    orientation = ori[x1::xbin,y1::ybin]-np.pi/2
-    coherence = coh[x1::xbin,y1::ybin] #binned coh array
+    
     coherence[np.isnan(coherence)]=np.nanmin(coherence)
     
     if plotf:    
