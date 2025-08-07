@@ -19,7 +19,7 @@ Part of DeftPunk package
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
-from matplotlib.widgets import Button, Slider, CheckButtons, TextBox
+from matplotlib.widgets import Slider, CheckButtons, TextBox
 import pandas as pd
 from DeftPunk import processing as pc
 import DeftPunk.Analysis as an
@@ -36,7 +36,6 @@ import os
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 
-bin_factor = 4
 
 
 def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='px', vfield=None, endsave=True, savedir='Select'):
@@ -61,9 +60,9 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
        det_param : array size 3
            with in order
            - w : int or float
-               feature size in pixel on which most of detection parameters are chained to.
-               As an example, the window size for vector field computation is sigma=1.5*w
-               The other relations are described at the end.
+               size of oriented feature in pixel.
+               For example, for a cell monolayer, the width of a cell.
+               It controls the director field computation and thus influences the whole detection process.
            - R : int or float
                Radius of detection. Around a defect a contour is taken at distance R
                and the director field is taken on this contour. This is used to 
@@ -114,7 +113,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
        vfield : NxM numpy array
            Computed director field (binned) the size is L/int(w/4) x H/int(w/4)
            with LxH the shape of the image
-       handles : list of handles
+       handles : list of buttons
            list containing the references of the sliders and buttons, so they stay active
            
     Interface
@@ -164,13 +163,13 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     
     ### All necessary detection parameters. The 3 selected ones (f, R, o) define all others: ####
     sigma           = round(1.5*w) #integration size for orientation field
-    bin_            = round(w/bin_factor) # DownSampling size for orientation field
+    bin_            = round(w/4) # DownSampling size for orientation field
     fsig            = 2 # in units of bin. Size of filter for nematic order parameter computation
     order_threshold = det_param[2]
     BoxSize         = 6
     peak_threshold  = 0.75
     
-    # if the director field is an input, we lock this value
+    # if the director field is an input, we lock it: it is never re-computed
     if not (vfield is None):
         lock_field = True
     else:
@@ -192,11 +191,11 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     # detection of defect location, axis and anisotropy
     e_vec, err_vec, cost_vec, theta_vec, phi, defect_char, vfield, pos = pc.get_anisotropy(img, False, R/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=vfield, plotit=False, stack=stack, savedir = None, give_field = True)
     fieldcolor  = 'navy'
-    my_field    = [vfield, pos]
+    my_field    = [vfield, pos] # pos = [x,y]
     
     fig, ax     = plt.subplots()
     
-    #image 
+    # image 
     if not (img is None):
         back_img = plt.imshow(img, cmap='binary')
     # define director field display
@@ -207,7 +206,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     
     ## Initial display 
     # Lists of objects. It will be use to change their visibility and remove them
-    art, R_vec = gu.draw_defects(ax, defect_char, plot_cbar=True)
+    art, R_vec = gu.draw_defects(ax, defect_char, plot_cbar=True, R=R)
     
     # art_vec has vector field in index 0, then arrows and annotations
     art_vec = [qline, *art]
@@ -295,7 +294,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
         # update parameter values
         sigma           = round(1.5*w_slider.val) #integration size for orientation field
-        bin_            = round(w_slider.val/bin_factor) # Sampling size for orientation field
+        bin_            = round(w_slider.val/4) # Sampling size for orientation field
         fsig            = 2 # in units of bin. Size of filter for order parameter
         order_threshold = Thresh_slider.val
         BoxSize         = 6
@@ -322,7 +321,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
         # get useful parameter values
         field = my_field[0]
-        bin_ = round(w_slider.val/bin_factor) # Sampling size for orientation field
+        bin_ = round(w_slider.val/4) # Sampling size for orientation field
         
         # to store the newly computed anisotropies 
         new_anisotropy = np.empty(len(defect_char))*np.nan
@@ -348,7 +347,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
         # update parameter values
         sigma           = round(1.5*w_slider.val) #integration size for orientation field
-        bin_            = round(w_slider.val/bin_factor) # Sampling size for orientation field
+        bin_            = round(w_slider.val/4) # Sampling size for orientation field
         fsig            = 2 # in units of bin. Size of filter for order parameter
         order_threshold = Thresh_slider.val
         BoxSize         = 6
@@ -404,13 +403,13 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
         
         sigma = round(1.5*w_slider.val) #integration size for orientation field
-        bin_ = round(w_slider.val/bin_factor) # Sampling size for orientation field
+        bin_ = round(w_slider.val/4) # Sampling size for orientation field
         
         over = True
         # If the image is a stack, perform detection for each frame
         if stack:
             print('Computing the whole stack...')
-            e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = pc.get_anisotropy(imgpath, False, R_slider.val/bin_, round(1.5*w_slider.val), round(w_slider.val/bin_factor), fsig, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
+            e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = pc.get_anisotropy(imgpath, False, R_slider.val/bin_, round(1.5*w_slider.val), round(w_slider.val/4), fsig, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
         plt.close(fig)
         
         if endsave:
@@ -460,7 +459,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
             if not R_vec[i] is None:
                 R_vis = R_vec[i].get_visible()
                 break
-        gu.draw_defects(axsave, defect_char, plot_cbar=True, R_vis=R_vis)
+        gu.draw_defects(axsave, defect_char, plot_cbar=True, R_vis=R_vis, R=R_slider.val)
         
         # set the main figure display range
         axsave.set_xlim(ax.get_xlim())
@@ -1068,7 +1067,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     
     
     def on_directory(event):
-        global det_param
+        nonlocal det_param
         print('Apply the analysis with chosen parameters on a directory. Chose it!')
         print(det_param)
         root = tkinter.Tk()
@@ -1116,7 +1115,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
                     plt.close(fig)
                 else:
                     plt.imshow(imgtmp, cmap='gray')
-                    gu.draw_defects(ax, defect_table, 0, plot_cbar=True)
+                    gu.draw_defects(ax, defect_table, plot_cbar=True)
                     fig.canvas.draw()
                     imgarray = np.array(fig.canvas.renderer.buffer_rgba())[..., :3]
                     plt.close(fig)
@@ -1125,7 +1124,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         
     def stat_func(event):
         global defect_char
-        global img
+        nonlocal img
         
         # nonlocal stack
         # nonlocal unit
@@ -1150,7 +1149,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         plt.plot(sh[0]/2+R*np.cos(phi), sh[1]/2+R*np.sin(phi))
         
         
-        e_av_profile, average_theta = pc.average_profile(defect_char, img, f, R)
+        e_av_profile, average_theta = an.average_profile(defect_char, img, f, R)
         es, costs = pc.anisotropy_comparison(phi, average_theta)
         e_av_profile = es[np.argmin(costs)]
         

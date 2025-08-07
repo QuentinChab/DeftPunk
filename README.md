@@ -17,6 +17,7 @@ In this README, you will find:
 4. Description of parameters and interface sliders/buttons
 5. Detailed description of selected functions
 6. Known issues
+7. What are the files in the DeftPunk folder?
 
 //////////////////// 1. How to become a Defect Punk ///////////////////
 
@@ -308,7 +309,7 @@ INPUTS
         if False, only the points are.
 
 /////////////// 6. known issues ////////////////////////////////////////////////////
-- The preferred image format is .tif. Format .png is tested for non-stack images.
+- The preferred image format is .tif. Format .png is tested for non-stack images. jpg and bmp should work too.
     Other format are not tested. It should work for non-stack images but not for stacks.
 
 - On Mac, calling the browser makes the kernel crash.
@@ -319,4 +320,45 @@ INPUTS
 
 - On linux, calling the browser cause warning messages to appear. Ignore them.
 
-- The Tracking Interface may be blinking and prevent you from using other windows
+////////////// 7. What's in the folder //////////////////////////////////////////
+
+Here is a description of the files in the top folder.
+
+// First two tif images to test the package on
+`20240215_Actin_Only_8_tif.tif`
+Microscopy image of actin on a substrate of lipids.
+Taken by Gwendal Guérin, Institut Curie UMR168
+
+`MT_kinesin_blue.tif`
+Stack of a system of Microtubule+Kinesin+ATP.
+From Dogic group: Sanchez, Chen, DeCamp, Heyman and Dogic, Nature 491 431-434 (2012)
+
+// Then 3 example functions to show how to use the package
+`main.py`
+Most simple use of the package. Calls the global interface.
+
+`Example.py`
+Semi-programmatic use. 
+The user programatically defines the image path and save path, and select parameter from interface.
+
+`Example_No_GUI.py`
+Programmatic use. Image path, save path and parameters are defined by the user in the script.
+
+// Finally descriptive files
+`README.md`
+You're reading it. How-to-use instructions.
+
+`ScriptDescription.txt`
+More detailed description of certain functions.
+
+// Directories
+`/DeftPunk`
+Contains all the logic, functions to call.
+
+`Old`
+Old version of the function.
+
+`__pycache__`
+Generated automatically when I open script in IDE.
+
+////////////////// Hope you find it useful! /////////////////////////////////////////
