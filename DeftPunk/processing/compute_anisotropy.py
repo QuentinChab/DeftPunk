@@ -67,14 +67,18 @@ def compute_angle_diagram(orientation, R, center=None, axis=0, sym= False, plott
     #while  np.any(np.isnan(tx)) and R>2:
         # tensor_unitx = angle_interpx((y[round(center[1])]+R*np.sin(phi), x[round(center[0])]+R*np.cos(phi)))
         # tensor_unity = angle_interpy((y[round(center[1])]+R*np.sin(phi), x[round(center[0])]+R*np.cos(phi)))
+    
+    
     tensor_unitx = angle_interpx((center[1]+R*np.sin(phi+axis), center[0]+R*np.cos(phi+axis)))
     tensor_unity = angle_interpy((center[1]+R*np.sin(phi+axis), center[0]+R*np.cos(phi+axis)))
         #tx[np.isnan(tx)] = tensor_unitx[np.isnan(tx)]
         #ty[np.isnan(ty)] = tensor_unity[np.isnan(ty)]
         #R = R-1
+    
+    
     tx = tensor_unitx
     ty = tensor_unity
-    
+
     theta_unit = ((np.arctan2(ty, tx)/2) - axis)%(np.pi)
     theta_unit[np.logical_and(phi>3*np.pi/2, theta_unit<np.pi/4)] = theta_unit[np.logical_and(phi>3*np.pi/2, theta_unit<np.pi/4)]+np.pi
     theta_unit[np.logical_and(phi<np.pi/2, theta_unit>3*np.pi/4)] = theta_unit[np.logical_and(phi<np.pi/2, theta_unit>3*np.pi/4)]-np.pi

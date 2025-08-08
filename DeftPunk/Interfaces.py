@@ -187,10 +187,9 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         field_visible = True
     
     ########## Initialization ######################
-    
     ## Initial detection 
     # detection of defect location, axis and anisotropy
-    e_vec, err_vec, cost_vec, theta_vec, phi, defect_char, vfield, pos = pc.get_anisotropy(img, False, R/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=vfield, plotit=False, stack=stack, savedir = None, give_field = True)
+    e_vec, err_vec, cost_vec, theta_vec, phi, defect_char, vfield, pos = pc.get_anisotropy(img, R/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=vfield, plotit=False, stack=False, savedir = None, give_field = True)
     fieldcolor  = 'navy'
     my_field    = [vfield, pos] # pos = [x,y]
     
@@ -307,7 +306,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
             input_field=None
             
         # re-detect defects
-        e_vec, err_vec, cost_vec, theta_vec, phi, dchar, field, pos = pc.get_anisotropy(img, False, R_slider.val/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=input_field, plotit=False, stack=False, savedir = None, give_field=True)
+        e_vec, err_vec, cost_vec, theta_vec, phi, dchar, field, pos = pc.get_anisotropy(img, R_slider.val/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=input_field, plotit=False, stack=False, savedir = None, give_field=True)
         vfield = field
         defect_char = dchar
         my_field[0] = field
@@ -357,9 +356,9 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
             input_field = vfield
         else:
             input_field = None
-            
+        
         # re-perform detection (but not director field, since prescribed_field=input_field)
-        e_vec, err_vec, cost_vec, theta_vec, phi, dchar, vfield, pos = pc.get_anisotropy(img, False, R_slider.val/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=input_field, plotit=False, stack=stack, savedir = None, give_field=True)
+        e_vec, err_vec, cost_vec, theta_vec, phi, dchar, vfield, pos = pc.get_anisotropy(img, R_slider.val/bin_, sigma, bin_, fsig, BoxSize, order_threshold, peak_threshold, prescribed_field=input_field, plotit=False, stack=False, savedir = None, give_field=True)
         defect_char = dchar
         my_field[0] = vfield
         my_field[1] = pos
@@ -410,7 +409,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         # If the image is a stack, perform detection for each frame
         if stack:
             print('Computing the whole stack...')
-            e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = pc.get_anisotropy(imgpath, False, R_slider.val/bin_, round(1.5*w_slider.val), round(w_slider.val/4), fsig, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
+            e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = pc.get_anisotropy(imgpath, R_slider.val/bin_, round(1.5*w_slider.val), round(w_slider.val/4), fsig, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
         plt.close(fig)
         
         if endsave:
@@ -1061,7 +1060,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         #Loop over files
         for filename in os.listdir(folder):
             if filename.endswith('tif') or filename.endswith('png'):
-                e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = pc.get_anisotropy(folder+os.sep+filename, False, det_param[1]/bin_, sigma, bin_, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
+                e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = pc.get_anisotropy(folder+os.sep+filename, det_param[1]/bin_, sigma, bin_, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
                 
                 defect_table.to_csv(folder+os.sep+'data_'+filename[:-3]+'csv')
                 
