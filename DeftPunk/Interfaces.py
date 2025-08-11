@@ -1028,7 +1028,9 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         global defect_char
         nonlocal track_param
         if len(defect_char)>0:
+            # calls the tracking interface
             defect_char, track_param, ref = check_tracking(filename, defect_char, track_param=track_param)#searchR=track_param[1], memory=track_param[0], filt=track_param[2])
+            
             # keep a reference to the buttons (in ref) so they stay active
             keep[0] = ref
         else:
@@ -1060,96 +1062,102 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         
         #Loop over files
         for filename in os.listdir(folder):
-            if filename.endswith('tif') or filename.endswith('png'):
+            # only image files
+            
+            if filename.split('.')[-1].lower() in ['tif', 'tiff', 'png', 'jpg', 'bmp', 'jpeg']: # only those format are supported
+                # detection function
                 e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = pc.get_anisotropy(folder+os.sep+filename, False, det_param[1]/bin_, sigma, bin_, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
                 
-                defect_table.to_csv(folder+os.sep+'data_'+filename[:-3]+'csv')
+                defect_table.to_csv(folder+os.sep+'data_'+'.'.join(filename.split('.')[:-1])+'csv')
                 
                 
-                #plt.figure()
+                #create a display
                 fig, ax = plt.subplots()
+                
+                # load image
                 if filename.endswith('tif'):
                     imgtmp = tf.imread(folder+os.sep+filename)
                 else:
                     imgtmp = plt.imread(folder+os.sep+filename)
+                
+                # plot defect points
                 if stack:
-                    # re arrange the trajectory list
-                    defect_table.sort_values(by='frame')
-                    order_traj = np.zeros(len(defect_table))
-                    curr_part = defect_table['particle'].to_numpy()
-                    old_list = np.unique(curr_part)
-                    new_list = np.arange(len(old_list))                    
-                    for i in range(len(old_list)):
-                        storing_places = curr_part == old_list[i]
-                        order_traj[storing_places] = new_list[i]
-                    
+                    # for each frame
                     imglist = []
                     for i in range(len(imgtmp)):
-                        ax.imshow(imgtmp[i], cmap='gray')
-                        gu.draw_defects(ax, defect_table, i, plot_cbar=(not i))
+                        ax.imshow(imgtmp[i], cmap='gray') # display image
+                        gu.draw_defects(ax, defect_table, i, plot_cbar=(not i)) # draw the defect points at frame i
                         fig.canvas.draw()
-                        imgarray = np.copy(np.array(fig.canvas.renderer.buffer_rgba())[..., :3])
-                        imglist.append(imgarray)
-                        ax.clear()
-                        # plt.close(fig)
+                        imgarray = np.copy(np.array(fig.canvas.renderer.buffer_rgba())[..., :3]) # transform into float array
+                        imglist.append(imgarray) # save into the list
+                        ax.clear() # erase for the next frame
+                        
+                    # save the stack
                     tf.imwrite(folder+os.sep+'Traj_'+filename, np.stack(imglist, axis=0), photometric='rgb')
                     plt.close(fig)
                 else:
-                    plt.imshow(imgtmp, cmap='gray')
+                    plt.imshow(imgtmp, cmap='gray') # plot image
                     gu.draw_defects(ax, defect_table, plot_cbar=True)
                     fig.canvas.draw()
-                    imgarray = np.array(fig.canvas.renderer.buffer_rgba())[..., :3]
+                    imgarray = np.array(fig.canvas.renderer.buffer_rgba())[..., :3] # transform in float array
                     plt.close(fig)
-                    tf.imwrite(folder+os.sep+'Traj_'+filename, imgarray, photometric='rgb')
+                    tf.imwrite(folder+os.sep+'Traj_'+filename, imgarray, photometric='rgb') # save
         print('Folder fully analyzed')
         
     def stat_func(event):
         global defect_char
         nonlocal img
         
-        # nonlocal stack
-        # nonlocal unit
-        # nonlocal unit_per_px
-        # nonlocal unit_t
-        # nonlocal unit_per_frame
-        # nonlocal vfield
-        
         f = det_param[0]
         R = det_param[1]
         
+        # statistics about anisotropy
         an.stat_me(defect_char, img=img, stack=stack, frame=0, unit=unit, unit_per_px=unit_per_px, tunit=unit_t, t_per_frame=unit_per_frame)
+        # Compute average defect: crop image around defect, rotate them and average all intensities
         ppattern, mpattern = an.defect_pattern(img, defect_char)
+        # compute director field of the average +1/2 defect
         orientation, coherence, ene, X, Y = pc.orientation_analysis(ppattern, sigma=round(1.5*f), binning=round(f/4), plotf=False)
+        # compute the director field profile of this average defect
         phi, theta_unit = pc.compute_angle_diagram(orientation, R)
+        # commpute anisotropy 
         e_pattern, err_e, costmin, theta_unit = pc.one_defect_anisotropy(orientation, R=R)
         
+        # plot average +1/2 defect with director field
         plt.figure()
         plt.imshow(ppattern, cmap='binary')
         plt.quiver(X, Y, np.cos(orientation), np.sin(orientation), angles='xy', scale=1/round(f/4), width=0.5, headaxislength=0, headlength=0, pivot='mid', color='red', units='xy')
         sh = ppattern.shape
         plt.plot(sh[0]/2+R*np.cos(phi), sh[1]/2+R*np.sin(phi))
         
-        
+        # for each defect, take the angle profile and average them all
         e_av_profile, average_theta = an.average_profile(defect_char, img, f, R)
-        es, costs = pc.anisotropy_comparison(phi, average_theta)
+        es, costs = pc.anisotropy_comparison(phi, average_theta) # fit anisotropy on average angle profile
         e_av_profile = es[np.argmin(costs)]
         
+        # plot angle profile of average defect and average angular profile
         plt.figure()
-        plt.plot(phi, theta_unit, '.')
-        plt.plot(phi, average_theta, '.')
+        plt.plot(phi, theta_unit, '.', label='Profile of average defect')
+        plt.plot(phi, average_theta, '.', label='Average profile of all defects')
+        plt.xlabel('Azimuthal angle [rad]')
+        plt.ylabel('Director angle [rad]')
+        plt.legend()
         
-        
+        # average +1/2 defect
         plt.figure()
         plt.imshow(ppattern, cmap='gray')
         plt.title ('Average field around +1/2 defect\n Anisotropy = %.2f\n Anisotropy (average profile) = %.2f\n Anisotropy (average value) = %.2f'%(e_pattern, e_av_profile, np.nanmean(defect_char['Anisotropy'])))
         plt.tight_layout()
+        
+        # average -1/2 defect
         plt.figure()
         plt.imshow(mpattern, cmap='gray')
         plt.title ('Average field around -1/2 defect')
-        if stack:
-            an.motility_analysis(defect_char, dt=1, unit_per_frame=unit_per_frame, unit_t = unit_t, unit_per_px = unit_per_px, unit_space = unit)
+        
+        # analyze defect displacement (not finished)
+        # if stack:
+        #     an.motility_analysis(defect_char, dt=1, unit_per_frame=unit_per_frame, unit_t = unit_t, unit_per_px = unit_per_px, unit_space = unit)
     
-    ## create buttons
+    ## create buttons (figure, [button coordinates], slider_name, call_function)
     loadbutton  = gu.create_button(fig, [0.05, 0.8, 0.25, 0.07], 'Load', load_movie)
     detbutton   = gu.create_button(fig, [0.05, 0.7, 0.25, 0.07], 'Start Detection', detection)
     trackbutton = gu.create_button(fig, [0.05, 0.6, 0.25, 0.07], 'Check_tracking', check_track)
@@ -1160,6 +1168,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     
     ##################### Unit boxes creation ###############################
     
+    # In those boxes, the user can write the physical units and conversion between unit and pixels/frames
     textspaceax = fig.add_axes([0.85, 0.85, 0.12, 0.07])
     textspaceax.axis('off')
     textspaceax.text(0, 0, 'Space\nUnit')
@@ -1175,6 +1184,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     fpsax = fig.add_axes([0.85, 0.3, 0.12, 0.07])
     fpsBox = TextBox(fpsax, '', initial=unit_per_frame)
     
+    # update functions 
     def set_unit(text):
         nonlocal unit
         unit = text    
@@ -1197,6 +1207,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     plt.show()
     # while plt.fignum_exists(fig.number):
     #     plt.pause(0.1)
+    
     return [loadbutton, trackbutton, savebutton, detbutton, dirbutton, unitBox, uppxBox, unittBox, fpsBox, statbutton, keep]
         
 
