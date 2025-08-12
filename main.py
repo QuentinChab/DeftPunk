@@ -10,5 +10,5 @@ from DeftPunk import detect_defect_GUI
 
     
 if __name__ == "__main__":
-    keep = detect_defect_GUI()
+    _ = detect_defect_GUI()
     

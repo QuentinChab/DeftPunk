@@ -123,7 +123,7 @@ def compute_angle_diagram(orientation, R, center=None, axis=0, sym= False, plott
     
     return phi, theta_unit
 
-def anisotropy_comparison(phi, theta, R=np.nan, path = '.'+os.sep+'ref_epsilon_shift'+os.sep):#r'.\ref_epsilon\\'
+def anisotropy_comparison(phi, theta, R=np.nan, path = 'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon_shift'+os.sep):#r'.\ref_epsilon\\'
     if np.all(np.isnan(theta)):
         return [np.nan], [np.nan]
     if np.isnan(R):
@@ -133,8 +133,8 @@ def anisotropy_comparison(phi, theta, R=np.nan, path = '.'+os.sep+'ref_epsilon_s
         costs = np.ones(es.shape)
     else:
         path = origin_file+os.sep+'ref_epsilon'+os.sep
-        es = np.load(path + 'e.npy')
-        phi_ref = np.load(path + 'phi.npy')
+        es = np.load(path + 'e_vec.npy')
+        phi_ref = np.load(path + 'orientationAzimuthal.npy')
         xshift= np.load(path + os.sep + 'xshift.npy')
         costs = np.ones((len(es), len(xshift)))
     

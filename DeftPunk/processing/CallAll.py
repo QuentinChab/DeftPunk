@@ -91,6 +91,7 @@ def one_defect_anisotropy(field, R=np.nan, xc=None, yc=None, axis = 0, err = 0.0
     for i in range(len(R_vec)):
         
         phi_cycle, th_cycle = compute_angle_diagram(field, R_vec[i], center=[xc, yc], axis=axis, plotthis=plotit, sym=sym)
+        
         # attempt a tilt correction. Note that this is very wrong if the center is wrongly detected
         #ªth_cycle = th_cycle-th_cycle[0]
         es, costs = anisotropy_comparison(phi_cycle, th_cycle)
@@ -129,7 +130,7 @@ def one_defect_anisotropy(field, R=np.nan, xc=None, yc=None, axis = 0, err = 0.0
         
         plt.subplot(1,2,2)
         plt.plot(phi_cycle, th_min, 'o', label='Measure')
-        th_ref = np.load(os.path.abspath('..')+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
+        th_ref = np.load('DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
         plt.plot(phi_cycle, th_ref, '--', label='Reference')
         #plt.plot(phi_cycle, phi_cycle)
         plt.xlabel('Azimuthal angle [rad]')
@@ -339,14 +340,14 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=None, fov=2,
  
     #for ni 
     if prescribed_field is None:
-        orientation, coherency, energy, x, y = orientation_analysis(img, sigma, bin_, plotit)        
+        orientation, coherency, energy, x, y = orientation_analysis(img, sigma, bin_, plotit)         
     else:
         orientation = prescribed_field
         coherency = np.ones(prescribed_field.shape)
         sh = orientation.shape
         x_ = np.arange(sh[1])
         y_ = np.arange(sh[0])
-        x, y = np.meshgrid(x_, y_)     
+        x, y = np.meshgrid(x_, y_)   
     Qloc, boxes, chargeb, defect_axis, centroidsN = defect_detection(orientation, coherency, fov, BoxSize, order_threshold, peak_threshold, plotall=plotit, method='weighted')
     
     # ok_dist will be 0/False if the point has any other defect at a distance of 1.5R, 1/True otherwise
@@ -418,6 +419,7 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=None, fov=2,
         plt.quiver(x,y,np.cos(orientation),np.sin(orientation),angles='xy',pivot='mid',headaxislength=0,headlength=0,scale=50)
         
         fmap = plt.figure()
+        axmap = plt.gca()
         plt.imshow(img, cmap='gray')
         #plt.quiver(x,y,np.cos(orientation), np.sin(orientation), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=1, units='xy', scale=1/bin_, color='forestgreen')
         mycmap = 'PiYG'#'copper'#
@@ -445,7 +447,7 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=None, fov=2,
             else:
                 plt.plot(img_centroids[i,1], img_centroids[i,0], 'ko')
         #plt.colorbar(cm.ScalarMappable(norm=Normalize(0, maxdev), cmap='OrRd'), label='deviation to mean anisotropy')
-        plt.colorbar(cm.ScalarMappable(norm=Normalize(-0.5, 0.5), cmap=mycmap), label='Anisotropy []')
+        plt.colorbar(cm.ScalarMappable(norm=Normalize(-0.5, 0.5), cmap=mycmap), label='Anisotropy []', ax=axmap)
     
     
     if len(fields)==0:
