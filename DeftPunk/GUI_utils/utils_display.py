@@ -24,7 +24,6 @@ def update_display(pos, fig, art_vec, R_vec, field, ax, R, dchar, bin_, fieldcol
     R_vis = False # are contours of anisotropy computation drawn?
     vis = art_vec[0].get_visible() # 
     
-    
     # Remove all previous display
     art_vec[0].remove()
     for i in range(1,len(art_vec)):
@@ -112,18 +111,20 @@ def draw_defects(ax, all_data, frame=None, R=1, plot_cbar=False, animated=False,
     for i in range(len(chargedef)):
         if np.abs(chargedef[i]-1/2)<0.1:
             c = colorm(es[i]/2/lim+0.5)
-            artists_vec[incr] = ax.annotate('%.2f'%(es[i]), (centroids[i,1], centroids[i,0]),
+            # ax.plot(centroids[i,1], centroids[i,0], 'o', color='#D74E09')[0]
+            artists_vec[incr] = ax.annotate('%.2f'%(es[i]), (centroids[i,1]-30, centroids[i,0]),
                         color = c, fontsize='small', path_effects=[pe.withStroke(linewidth=1, foreground="k")])
   
             artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), angles='xy', color=c, edgecolor='k', linewidth=1)
             R_vec[i] = ax.plot(centroids[i,1]+R*np.cos(this_phi), centroids[i,0]+R*np.sin(this_phi), 'r', visible=R_vis)[0]
-            incr += 3
+            incr += 3 #2
         elif np.abs(chargedef[i]+1/2)<0.1:
             minuscolor = 'cornflowerblue'
+            # ax.plot(centroids[i,1], centroids[i,0], 'o', color='#D74E09')[0]
             artists_vec[incr] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), angles='xy', color=minuscolor)
             artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]+2*np.pi/3), np.sin(axisdef[i]+2*np.pi/3), angles='xy', color=minuscolor)
             artists_vec[incr+2] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]-2*np.pi/3), np.sin(axisdef[i]-2*np.pi/3), angles='xy', color=minuscolor)
-            incr+=3
+            incr+=3 #1
         elif np.abs(chargedef[i]+1)<0.1:
             artists_vec[incr] = ax.plot(centroids[i,1], centroids[i,0], 'o', color = 'orange')
             incr += 1

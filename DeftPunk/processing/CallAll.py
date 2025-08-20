@@ -138,7 +138,8 @@ def one_defect_anisotropy(field, R=np.nan, xc=None, yc=None, axis = 0, err = 0.0
         plt.title(r'e=%.2f'%(emin))
         plt.legend()
         plt.tight_layout()
-        
+    
+    
     return emin, err_e, costmin, th_min
    
 def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=None, fov=2, BoxSize=6, order_threshold=0.25, peak_threshold=0.75, prescribed_field=None, plotit=False, stack=False, savedir = None, give_field=False):
@@ -374,7 +375,6 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=None, fov=2,
     e_vec = []#np.empty((np.sum(np.abs(chargeb-0.5)<0.1),1))*np.nan
     err_vec = []#np.empty(e_vec.shape)
     cost_vec = []#np.empty(e_vec.shape)
-    fields = []
     theta_vec = []
     index = 0
     
@@ -396,6 +396,7 @@ def get_anisotropy(imgpath, average=False, R=np.nan, sigma=25, bin_=None, fov=2,
                 err_vec.append(err_vec_i)
                 cost_vec.append(cost_vec_i)
                 theta_vec.append(th)
+                fields.append(orientation)
                 index+=1
     
     if average:

@@ -34,7 +34,7 @@ plt.rcParams.update({'font.size': 16})
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 
-def compute_angle_diagram(orientation, R, center=None, axis=0, sym= False, plotthis = False):
+def compute_angle_diagram(orientation, R, center=None, axis=0, sym= False, plotthis = False, correction=True):
     #Load the reference phi
     phi = np.load(origin_file+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
     th_test = np.copy(orientation)
@@ -121,9 +121,13 @@ def compute_angle_diagram(orientation, R, center=None, axis=0, sym= False, plott
         plt.plot(center[0], center[1], 'o')
         plt.axis('scaled')
     
+    if correction:
+        theta_unit = theta_unit - (theta_unit[-1]-np.pi + theta_unit[0])/4
+    
     return phi, theta_unit
 
 def anisotropy_comparison(phi, theta, R=np.nan, path = 'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon_shift'+os.sep):#r'.\ref_epsilon\\'
+
     if np.all(np.isnan(theta)):
         return [np.nan], [np.nan]
     if np.isnan(R):
@@ -203,12 +207,14 @@ def reference_profile(e):
 
     """
     if np.isnan(e):
-        phi = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+        phi = np.load('DeftPunk'+os.sep+'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
         ref_th = np.ones(phi.shape)*np.nan
     else:
         if np.abs(e)<0.01:
             e = 0.
-        ref_th = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e))
+            ref_th = phi/2
+        else:
+            ref_th = np.load('DeftPunk'+os.sep+'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e))
     
     return ref_th        
         

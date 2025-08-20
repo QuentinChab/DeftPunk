@@ -450,8 +450,13 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         # save the current display
         
         # create first an identical image
+        if back_img.cmap(360)[0]: # This is True if cmap='gray' (cmap index 360 is (1,1,1) )
+            c_map = 'gray'
+        else:
+            c_map = 'binary'
+        
         figsave, axsave = plt.subplots()
-        plt.imshow(img, cmap='binary')
+        plt.imshow(img, cmap=c_map)
         # plot all visible features 
         if art_vec[0].get_visible():
             axsave.quiver(pos[0], pos[1], np.cos(vfield), np.sin(vfield), angles='xy', pivot='mid', headlength=0, headaxislength=0, scale_units='xy', scale=1/bin_ , color=fieldcolor)
