@@ -120,10 +120,13 @@ def compute_angle_diagram(orientation, R, center=None, axis=0, plotthis = False,
             left_corr = theta_unit[0]/2
         theta_unit = theta_unit - (right_corr + left_corr)/2
     
+    if correction:
+        theta_unit = theta_unit - (theta_unit[-1]-np.pi + theta_unit[0])/4
+    
     return phi, theta_unit
 
 def anisotropy_comparison(phi, theta, R=np.nan, path = 'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon_shift'+os.sep):#r'.\ref_epsilon\\'
-    
+
 
     if np.all(np.isnan(theta)):
         return [np.nan], [np.nan]

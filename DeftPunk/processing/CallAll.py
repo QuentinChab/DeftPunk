@@ -217,6 +217,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
         img, stack = load_image(imgpath)
     else:
         img = imgpath
+        
     
     ########### Detection for one frame #######################################
     ## compute director field, locate defects and compute anisotropy ##########
