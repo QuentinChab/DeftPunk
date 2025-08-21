@@ -22,7 +22,6 @@ from matplotlib import cm
 from matplotlib.colors import Normalize
 import numpy as np
 import os
-import tifffile as tf
 import pandas as pd
 from scipy.spatial.distance import cdist
 import trackpy as tp
@@ -80,7 +79,6 @@ def one_defect_anisotropy(field, R, xc=None, yc=None, axis = 0, err = 0.05, plot
 
     """
     ## find the best fit anisotropy
-    
     # get the director angle as a function of the azimutha angle
     phi_cycle, th_min   = compute_angle_diagram(field, R, center=[xc, yc], axis=axis, plotthis=plotit)
     # get the cost associated to each possible anisotropy
@@ -95,6 +93,7 @@ def one_defect_anisotropy(field, R, xc=None, yc=None, axis = 0, err = 0.05, plot
     # a cost of (1+err)*costmin. They will define the error.
     # by default err=0.05 -> cost = 1.05*costmin
     
+    
     err_level = costs[imin]*(1+err) # error level to detect
     # lower bound
     if imin==0:
@@ -108,7 +107,6 @@ def one_defect_anisotropy(field, R, xc=None, yc=None, axis = 0, err = 0.05, plot
     else:
         ierr2 = imin + np.argmin(np.abs(costs[imin:]-err_level))
     
-    # the error is half the range of those bounds
     err_e = (es[ierr2] - es[ierr1])/2
     
     ## Display
@@ -127,14 +125,15 @@ def one_defect_anisotropy(field, R, xc=None, yc=None, axis = 0, err = 0.05, plot
         
         plt.subplot(1,2,2)
         plt.plot(phi_cycle, th_min, 'o', label='Measure')
-        th_ref = np.load(os.path.abspath('..')+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
+        th_ref = np.load('DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
         plt.plot(phi_cycle, th_ref, '--', label='Reference')
         plt.xlabel('Azimuthal angle [rad]')
         plt.ylabel('Director angle [rad]')
         plt.title(r'e=%.2f'%(emin))
         plt.legend()
         plt.tight_layout()
-        
+    
+    
     return emin, err_e, costmin, th_min
    
 def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_threshold=0.25, peak_threshold=0.75, prescribed_field=None, plotit=False, stack=False, savedir = None, give_field=False):
@@ -259,6 +258,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
         err_vec     = [] # error on anisotropy
         cost_vec    = [] # cost function for best-fit anisotropy
         theta_vec   = [] # angular profile (director angle)
+        fields      = []
         
         for i in range(len(chargeb)):
             if np.abs(chargeb[i]-0.5)<0.1:
@@ -268,7 +268,8 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
                 err_vec.append(err_vec_i)
                 cost_vec.append(cost_vec_i)
                 theta_vec.append(th)
-        
+                fields.append(orientation)
+
         
         if plotit:
             indent = 0
@@ -526,11 +527,11 @@ def anisotropy_on_directory(dirname, sigma, bin_, fov, BoxSize, order_threshold,
     e_field_av = []
     
     for fname in os.listdir(dirname):
-        e_, err_vec, cost_vec, theta_, phi = get_anisotropy(dirname+os.sep+fname, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
-        #e_field, err_vec, cost_vec, theta_field, phi = get_anisotropy(dirname+os.sep+fname, True, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
+        e_, err_vec, cost_vec, theta_, phi, _ = get_anisotropy(dirname+os.sep+fname, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
+        # e_field, err_vec, cost_vec, theta_field, phi = get_anisotropy(dirname+os.sep+fname, True, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
         e_vec = [*e_vec, *e_]
         th_vec = [*th_vec, *theta_]
-        e_field_av.append(e_field)
+        # e_field_av.append(e_field)
         #print(theta_)
         #for i in range(len(theta_)): print(len(theta_[i]))
         
@@ -552,7 +553,7 @@ def anisotropy_on_directory(dirname, sigma, bin_, fov, BoxSize, order_threshold,
     
     if plotf:
         th_av[phi>np.pi/4] = th_av[phi>np.pi/4]%(np.pi)
-        theta_field[phi>np.pi/4] = theta_field[phi>np.pi/4]%(np.pi)
+        # theta_field[phi>np.pi/4] = theta_field[phi>np.pi/4]%(np.pi)
 
         ref_av = reference_profile(e_av)
         ref_profile = reference_profile(e_profile_av)
@@ -564,7 +565,7 @@ def anisotropy_on_directory(dirname, sigma, bin_, fov, BoxSize, order_threshold,
         plt.plot(phi, ref_av, '--', label='Individual average:\n$e=%.2f\\pm%.2f$'%(e_av, e_std))
         plt.errorbar(phi, th_av, th_std, fmt = '.', label='Average profile')
         plt.plot(phi, ref_profile, '--', color=plt.gca().lines[-1].get_color(), label=r'Reference for e=%.2f'%(e_profile_av))
-        plt.plot(phi, theta_field, '.', label='Profile of average field')
+        # plt.plot(phi, theta_field, '.', label='Profile of average field')
         plt.plot(phi, ref_field, '--', color=plt.gca().lines[-1].get_color(), label=r'Reference for e=%.2f'%(np.mean(e_field_av)))
         
         plt.xlabel('Azimuthal Angle [rad]')

@@ -56,8 +56,7 @@ def update_display(pos, fig, art_vec, R_vec, field, ax, R, dchar, bin_, fieldcol
     R_vis = False # are contours of anisotropy computation drawn?
     vis = art_vec[0].get_visible() # is director field drawn 
     
-    
-    ### Remove all previous display from art_vec and R_vec
+    # Remove all previous display
     art_vec[0].remove()
     for i in range(1,len(art_vec)):
         if not (art_vec[i] is None):
@@ -157,20 +156,23 @@ def draw_defects(ax, all_data, frame=None, R=1, plot_cbar=False, R_vis=False):
         if np.abs(chargedef[i]-1/2)<0.1:
             c = colorm(es[i]/2/lim+0.5)
             # write the anisotropy next to the defect
+            # ax.plot(centroids[i,1], centroids[i,0], 'o', color='#D74E09')[0]
             artists_vec[incr] = ax.annotate('%.2f'%(es[i]), (centroids[i,1], centroids[i,0]),
                         color = c, fontsize='small', path_effects=[pe.withStroke(linewidth=1, foreground="k")])
             # draw the arrow to indicate +1/2 defect
             artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), angles='xy', color=c, edgecolor='k', linewidth=1)
             # draw the contour around the defect
             R_vec[i] = ax.plot(centroids[i,1]+R*np.cos(this_phi), centroids[i,0]+R*np.sin(this_phi), 'r', visible=R_vis)[0]
-            incr += 3
+            incr += 3 #2
         elif np.abs(chargedef[i]+1/2)<0.1:
             minuscolor = 'cornflowerblue'
             # draw 3 arrows to indicate -1/2 in shape of tripod
+            # ax.plot(centroids[i,1], centroids[i,0], 'o', color='#D74E09')[0]
             artists_vec[incr] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), angles='xy', color=minuscolor)
             artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]+2*np.pi/3), np.sin(axisdef[i]+2*np.pi/3), angles='xy', color=minuscolor)
             artists_vec[incr+2] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]-2*np.pi/3), np.sin(axisdef[i]-2*np.pi/3), angles='xy', color=minuscolor)
             incr+=3
+            
         # any other defect is drawn as a point
         elif np.abs(chargedef[i]+1)<0.1:
             artists_vec[incr] = ax.plot(centroids[i,1], centroids[i,0], 'o', color = 'orange')

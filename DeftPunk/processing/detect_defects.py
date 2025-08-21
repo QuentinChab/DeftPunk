@@ -20,7 +20,8 @@ def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_thres
         prop_name = 'centroid_weighted'
     else:
         prop_name = 'centroid'
-
+        
+        
     boxes=[]
     chargeb=[]
     defect_axis=[]

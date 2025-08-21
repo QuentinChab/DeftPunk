@@ -28,7 +28,7 @@ def dominant_direction(img, sigma):
     dom_ori = np.arctan2(2 * axy.mean(), (ayy.mean() - axx.mean())) / 2
     return np.rad2deg(dom_ori)
 
-def orientation_analysis(img, sigma, binning, plotf=False, mode='pool'):    
+def orientation_analysis(img, sigma, binning, plotf=False, mode='downsample'):    
     """Input
     img     = image or path to image
     sigma   = I think it refers to the size of the box on which you determine the direction
@@ -108,21 +108,34 @@ def orientation_analysis(img, sigma, binning, plotf=False, mode='pool'):
         X,Y     = np.meshgrid(xpos,ypos)
         orientation = ori[x1::xbin,y1::ybin]-np.pi/2
         coherence = coh[x1::xbin,y1::ybin] #binned coh array
+
     else:
         print('chose a mode between pool and downsample')
         
-    
+
     coherence[np.isnan(coherence)]=np.nanmin(coherence)
+
     
     if plotf:    
+        # s         = img.shape
+        # select    = np.logical_and(X<s[1], Y<s[0])
+        # X         = X[select]
+        # Y         = Y[select]
+        # coherence = coherence[select]
+        # # ene       = ene[select]
+        # orientation = orientation[select]
+        
         plt.figure()
         plt.imshow(img, cmap='gray')
-        plt.quiver(X, Y, np.cos(orientation), np.sin(orientation), angles='xy', scale=1/binning, width=1.5, headaxislength=0, headlength=0, pivot='mid', color='red', units='xy')
+        # plt.gca().invert_yaxis()
+        plt.quiver(X, Y, np.cos(orientation), np.sin(orientation), angles='xy', scale=1/binning, width=2, headaxislength=0, headlength=0, pivot='mid', color='#D74E09', units='xy')
+        plt.axis('equal')
+        plt.axis('off')
         # headaxislength = 0 and headlength=0 to remove arrows
         # units = 'xy' to get into absolute units (by default, relative to the image size)
         # pivot ='mid' so the point is at the middle of the body
         # scale and width control the rod length and width
-        
+    
     return orientation, coherence, ene, X, Y
 
 def plot_vfield(X, Y, angle, plotimg = [], cfield='red', imgmap = 'gray'):

@@ -28,7 +28,7 @@ plt.rcParams.update({'font.size': 16})
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 
-def compute_angle_diagram(orientation, R, center=None, axis=0, plotthis = False):
+def compute_angle_diagram(orientation, R, center=None, axis=0, plotthis = False, correction=True):
     """
     Compute the director field profile around a central point with radius R
     It uses interpolation.
@@ -56,6 +56,7 @@ def compute_angle_diagram(orientation, R, center=None, axis=0, plotthis = False)
         Director angle.
 
     """
+    
     
     ### Define the contour where we will interpolate director field
     #Load the reference phi
@@ -92,7 +93,7 @@ def compute_angle_diagram(orientation, R, center=None, axis=0, plotthis = False)
     
     # go back to angle space
     theta_unit = ((np.arctan2(ty, tx)/2) - axis)%(np.pi)
-    # have a continuously nicreasing vector
+    # have a continuously increasing vector
     theta_unit[np.logical_and(phi>3*np.pi/2, theta_unit<np.pi/4)] = theta_unit[np.logical_and(phi>3*np.pi/2, theta_unit<np.pi/4)]+np.pi
     theta_unit[np.logical_and(phi<np.pi/2, theta_unit>3*np.pi/4)] = theta_unit[np.logical_and(phi<np.pi/2, theta_unit>3*np.pi/4)]-np.pi
     
@@ -107,10 +108,23 @@ def compute_angle_diagram(orientation, R, center=None, axis=0, plotthis = False)
         plt.quiver(center[0]+R*np.cos(phi), center[1]+R*np.sin(phi), R*np.cos(theta_rep), -R*np.sin(theta_rep), pivot='mid', scale=500, width=.003, headaxislength=0, headlength=0, color='r')
         plt.plot(center[0], center[1], 'o')
         plt.axis('scaled')
+        
+    if correction:
+        if np.isnan(theta_unit[-1]):
+            right_corr = 0
+        else:
+            right_corr = (theta_unit[-1]-np.pi)/2
+        if np.isnan(theta_unit[0]):
+            left_corr = 0
+        else:
+            left_corr = theta_unit[0]/2
+        theta_unit = theta_unit - (right_corr + left_corr)/2
     
     return phi, theta_unit
 
-def anisotropy_comparison(phi, theta, R=np.nan, path = '.'+os.sep+'ref_epsilon_shift'+os.sep):#r'.\ref_epsilon\\'
+def anisotropy_comparison(phi, theta, R=np.nan, path = 'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon_shift'+os.sep):#r'.\ref_epsilon\\'
+    
+
     if np.all(np.isnan(theta)):
         return [np.nan], [np.nan]
     if np.isnan(R):
@@ -120,8 +134,8 @@ def anisotropy_comparison(phi, theta, R=np.nan, path = '.'+os.sep+'ref_epsilon_s
         costs = np.ones(es.shape)
     else:
         path = origin_file+os.sep+'ref_epsilon'+os.sep
-        es = np.load(path + 'e.npy')
-        phi_ref = np.load(path + 'phi.npy')
+        es = np.load(path + 'e_vec.npy')
+        phi_ref = np.load(path + 'orientationAzimuthal.npy')
         xshift= np.load(path + os.sep + 'xshift.npy')
         costs = np.ones((len(es), len(xshift)))
     
@@ -191,12 +205,14 @@ def reference_profile(e):
 
     """
     if np.isnan(e):
-        phi = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+        phi = np.load('DeftPunk'+os.sep+'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
         ref_th = np.ones(phi.shape)*np.nan
     else:
         if np.abs(e)<0.01:
             e = 0.
-        ref_th = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e))
+            ref_th = phi/2
+        else:
+            ref_th = np.load('DeftPunk'+os.sep+'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e))
     
     return ref_th        
         
