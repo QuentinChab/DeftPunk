@@ -157,10 +157,10 @@ def draw_defects(ax, all_data, frame=None, R=1, plot_cbar=False, R_vis=False):
             c = colorm(es[i]/2/lim+0.5)
             # write the anisotropy next to the defect
             # ax.plot(centroids[i,1], centroids[i,0], 'o', color='#D74E09')[0]
-            artists_vec[incr] = ax.annotate('%.2f'%(es[i]), (centroids[i,1], centroids[i,0]),
+            artists_vec[incr] = ax.annotate('%.2f'%(es[i]), (centroids[i,1]-70, centroids[i,0]),
                         color = c, fontsize='small', path_effects=[pe.withStroke(linewidth=1, foreground="k")])
             # draw the arrow to indicate +1/2 defect
-            artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), angles='xy', color=c, edgecolor='k', linewidth=1)
+            artists_vec[incr+1] = ax.quiver(centroids[i,1], centroids[i,0], np.cos(axisdef[i]), np.sin(axisdef[i]), width=0.01, angles='xy', color=c, edgecolor='k', linewidth=1)
             # draw the contour around the defect
             R_vec[i] = ax.plot(centroids[i,1]+R*np.cos(this_phi), centroids[i,0]+R*np.sin(this_phi), 'r', visible=R_vis)[0]
             incr += 3 #2

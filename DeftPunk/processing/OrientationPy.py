@@ -128,7 +128,7 @@ def orientation_analysis(img, sigma, binning, plotf=False, mode='downsample'):
         plt.figure()
         plt.imshow(img, cmap='gray')
         # plt.gca().invert_yaxis()
-        plt.quiver(X, Y, np.cos(orientation), np.sin(orientation), angles='xy', scale=1/binning, width=2, headaxislength=0, headlength=0, pivot='mid', color='#D74E09', units='xy')
+        plt.quiver(X, Y, np.cos(orientation), np.sin(orientation), angles='xy', scale=1/binning, width=4, headaxislength=0, headlength=0, pivot='mid', color='#D74E09', units='xy')
         plt.axis('equal')
         plt.axis('off')
         # headaxislength = 0 and headlength=0 to remove arrows

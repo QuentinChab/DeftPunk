@@ -1071,7 +1071,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
 
             if filename.split('.')[-1].lower() in ['tif', 'tiff', 'png', 'jpg', 'bmp', 'jpeg']: # only those format are supported
                 # detection function
-                e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = pc.get_anisotropy(folder+os.sep+filename, False, det_param[1]/bin_, sigma, bin_, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
+                e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = pc.get_anisotropy(folder+os.sep+filename, det_param[1]/bin_, sigma, bin_, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
                 
                 defect_table.to_csv(folder+os.sep+'data_'+'.'.join(filename.split('.')[:-1])+'csv')
                 

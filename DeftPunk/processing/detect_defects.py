@@ -11,6 +11,7 @@ from scipy.signal import convolve2d
 #import anisotropy_functions as fan
 from skimage import measure
 import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap
 import warnings
 
 def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_threshold, plotall=False, method='weighted'):
@@ -88,28 +89,33 @@ def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_thres
         
         absolute_threshold = peak_threshold#­min(0.9, max(0.5, peak_threshold*np.max(np.diff(cycle))))
         chargeb[s]=(np.sum(np.diff(cycle)>np.pi*absolute_threshold)*(-np.pi)+np.sum(np.diff(cycle)<(-np.pi*peak_threshold))*(np.pi)+np.sum(np.diff(cycle)))/(2*np.pi) #sum(diff(cycle)) is usually 0, account for the cases where psi(theta=0)=0 
-        if plotall: plt.plot(np.diff(cycle)/np.pi, label='Detection')
+        if plotall: plt.plot(np.diff(cycle)*180/np.pi, label='Detection')
         #if plotall: plt.plot(np.arange(len(cycle)), cycle, '.', label='Defect %.0f'%(s+1))
     if plotall:
         plt.plot(plt.xlim(), [0,0], 'k')
-        plt.plot(plt.xlim(), [absolute_threshold,absolute_threshold], '--k', label='peak_threshold')
-        plt.plot(plt.xlim(), [-absolute_threshold,-absolute_threshold], '--k')
-        plt.xlabel('Box contour')
-        plt.ylabel(r'$\Delta\theta_{Box}/\pi$ [rad]')
+        plt.plot(plt.xlim(), [absolute_threshold*180,absolute_threshold*180], '--k', label='peak_threshold')
+        plt.plot(plt.xlim(), [-absolute_threshold*180,-absolute_threshold*180], '--k')
+        plt.gca().set_yticks([-180, -135, -90, -45, 0, 45, 90, 135, 180])
+        plt.xlabel('Contour Index')
+        plt.ylabel(r'Director angle change [deg]')
         #plt.ylabel(r'$\theta_{Box}$ [rad]')
         plt.legend()
         plt.tight_layout()
         
     if plotall:
         plt.figure()
-        ax = plt.imshow(Qloc, cmap='Reds')
+        ax = plt.imshow(Qloc, cmap='Greens_r')
         plt.quiver(np.cos(theta), np.sin(theta), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.1, units='xy', scale=1.2)
         plt.plot(centroidsN[:, 1], centroidsN[:,0], 'o')
         plt.colorbar(ax, label='Order Parameter')
+        
+        binary_plot = binariN>0
+        cmap = ListedColormap([[219/255,241/255,213/255], [61/255,117/255,61/255]])
         plt.figure()
-        ax = plt.imshow(binariN)
+        ax = plt.imshow(binary_plot, cmap=cmap, interpolation='nearest')
         plt.quiver(np.cos(theta), np.sin(theta), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.1, units='xy', scale=1.2)
-        plt.colorbar(ax)
+        plt.plot(centroidsN[:, 1], centroidsN[:,0], 'o', color='white', markersize='12')
+        # plt.colorbar(ax)
     #compute orientation of the defect axis
     if True: #previously used method
         Qxxm=(mvec_x1*mvec_x1-mvec_y1*mvec_y1)/2.

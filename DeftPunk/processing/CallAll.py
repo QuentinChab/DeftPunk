@@ -125,7 +125,8 @@ def one_defect_anisotropy(field, R, xc=None, yc=None, axis = 0, err = 0.05, plot
         
         plt.subplot(1,2,2)
         plt.plot(phi_cycle, th_min, 'o', label='Measure')
-        th_ref = np.load('DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
+        fpath = os.path.abspath(__file__)
+        th_ref = np.load(os.sep.join(fpath.split(os.sep)[:-1])+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
         plt.plot(phi_cycle, th_ref, '--', label='Reference')
         plt.xlabel('Azimuthal angle [rad]')
         plt.ylabel('Director angle [rad]')
@@ -214,7 +215,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
     ####### Handle input: image or image path? ##############################
     # The input is either an image or a path to an image 
     if isinstance(imgpath, str):
-        img, stack = load_image(imgpath)
+        img, stack, _ = load_image(imgpath)
     else:
         img = imgpath
         
@@ -227,6 +228,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
             orientation, coherency, energy, x, y = orientation_analysis(img, sigma, bin_, plotit)        
         else:
             orientation = prescribed_field
+            print(prescribed_field)
             coherency = np.ones(prescribed_field.shape)
             sh = orientation.shape
             x_ = np.arange(sh[1])
@@ -252,7 +254,8 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
         
         ## Anisotropy computation 
         # Azimuthal coordinates
-        phi = np.load('DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+        fpath = os.path.abspath(__file__)
+        phi = np.load(os.sep.join(fpath.split(os.sep)[:-1])+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
         
         # will contain the anisotropy-related quantities
         e_vec       = [] # Anisotropy
@@ -279,7 +282,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
             plt.imshow(img, cmap='gray')
             plt.quiver(x,y,np.cos(orientation),np.sin(orientation),angles='xy',pivot='mid',headaxislength=0,headlength=0,scale=50)
             
-            fmap = plt.figure()
+            fmap, ax = plt.subplots()
             plt.imshow(img, cmap='gray')
             mycmap = 'PiYG'
             #☺colorm = cm.get_cmap('OrRd')
@@ -302,7 +305,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
                     plt.quiver(img_centroids[i,1], img_centroids[i,0], np.cos(defect_axis[i]-2*np.pi/3), np.sin(defect_axis[i]-2*np.pi/3), angles='xy', color='b')
                 else:
                     plt.plot(img_centroids[i,1], img_centroids[i,0], 'ko')
-            plt.colorbar(cm.ScalarMappable(norm=Normalize(-0.5, 0.5), cmap=mycmap), label='Anisotropy []')
+            plt.colorbar(cm.ScalarMappable(norm=Normalize(-0.5, 0.5), cmap=mycmap), label='Anisotropy []', ax=ax)
         
         # in some situations theta_vec cannot be empty
         if len(e_vec)==0:
