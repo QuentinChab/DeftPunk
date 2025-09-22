@@ -125,10 +125,12 @@ def orientation_analysis(img, sigma, binning, plotf=False, mode='downsample'):
         # # ene       = ene[select]
         # orientation = orientation[select]
         
+        b2 = 1
+        
         plt.figure()
         plt.imshow(img, cmap='gray')
         # plt.gca().invert_yaxis()
-        plt.quiver(X, Y, np.cos(orientation), np.sin(orientation), angles='xy', scale=1/binning, width=4, headaxislength=0, headlength=0, pivot='mid', color='#D74E09', units='xy')
+        plt.quiver(X[int(b2/2)::b2,int(b2/2)::b2], Y[int(b2/2)::b2,int(b2/2)::b2], np.cos(orientation[int(b2/2)::b2,int(b2/2)::b2]), np.sin(orientation[int(b2/2)::b2,int(b2/2)::b2]), angles='xy', scale=1/binning, width=4, headaxislength=0, headlength=0, pivot='mid', color='#D74E09', units='xy')
         plt.axis('equal')
         plt.axis('off')
         # headaxislength = 0 and headlength=0 to remove arrows

@@ -105,12 +105,12 @@ def one_defect_anisotropy(field, R, xc=None, yc=None, axis = 0, err = 0.05, plot
     if imin ==len(costs):
         ierr2 = imin
     else:
-        ierr2 = imin + np.argmin(np.abs(costs[imin:]-err_level))
+        ierr2 = imin + np.argmin(np.abs(np.array(costs[imin:])-err_level))
     
     err_e = (es[ierr2] - es[ierr1])/2
     
     ## Display
-    if plotit:
+    if plotit and not np.isnan(emin):
         
         plt.figure()
         
@@ -281,9 +281,10 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
             frange = plt.figure()
             plt.imshow(img, cmap='gray')
             plt.quiver(x,y,np.cos(orientation),np.sin(orientation),angles='xy',pivot='mid',headaxislength=0,headlength=0,scale=50)
-            
+            b2 = 2
             fmap, ax = plt.subplots()
             plt.imshow(img, cmap='gray')
+            # plt.quiver(x[int(b2/2)::2,int(b2/2)::2],y[int(b2/2)::2,int(b2/2)::2],np.cos(orientation[int(b2/2)::2,int(b2/2)::2]),np.sin(orientation[int(b2/2)::2,int(b2/2)::2]),angles='xy',pivot='mid',headaxislength=0,headlength=0,scale=20)
             mycmap = 'PiYG'
             #☺colorm = cm.get_cmap('OrRd')
             colorm = cm.get_cmap(mycmap)
@@ -305,7 +306,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
                     plt.quiver(img_centroids[i,1], img_centroids[i,0], np.cos(defect_axis[i]-2*np.pi/3), np.sin(defect_axis[i]-2*np.pi/3), angles='xy', color='b')
                 else:
                     plt.plot(img_centroids[i,1], img_centroids[i,0], 'ko')
-            plt.colorbar(cm.ScalarMappable(norm=Normalize(-0.5, 0.5), cmap=mycmap), label='Anisotropy []', ax=ax)
+            plt.colorbar(cm.ScalarMappable(norm=Normalize(-1, 1), cmap=mycmap), label='Anisotropy []', ax=ax)
         
         # in some situations theta_vec cannot be empty
         if len(e_vec)==0:
