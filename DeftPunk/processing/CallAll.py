@@ -304,6 +304,10 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
                     plt.quiver(img_centroids[i,1], img_centroids[i,0], np.cos(defect_axis[i]), np.sin(defect_axis[i]), angles='xy', color='b')
                     plt.quiver(img_centroids[i,1], img_centroids[i,0], np.cos(defect_axis[i]+2*np.pi/3), np.sin(defect_axis[i]+2*np.pi/3), angles='xy', color='b')
                     plt.quiver(img_centroids[i,1], img_centroids[i,0], np.cos(defect_axis[i]-2*np.pi/3), np.sin(defect_axis[i]-2*np.pi/3), angles='xy', color='b')
+                elif np.abs(chargeb[i]-1)<0.2:
+                    plt.plot(img_centroids[i,1], img_centroids[i,0], 'o', color='orange')
+                elif np.abs(chargeb[i]+1)<0.2:
+                    plt.plot(img_centroids[i,1], img_centroids[i,0], 'o', color='purple')
                 else:
                     plt.plot(img_centroids[i,1], img_centroids[i,0], 'ko')
             plt.colorbar(cm.ScalarMappable(norm=Normalize(-1, 1), cmap=mycmap), label='Anisotropy []', ax=ax)

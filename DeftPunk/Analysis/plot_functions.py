@@ -242,10 +242,10 @@ def plot_indexed_map(data, plotimg = []):
     traj = data['particle']
     trajlist = np.unique(traj)
     for i in range(len(trajlist)):
-        plt.plot(data['x'][traj==trajlist[i]], data['y'][traj==trajlist[i]])
+        plt.plot(data['x'][traj==trajlist[i]], data['y'][traj==trajlist[i]], alpha=0.5)
         xlast = (data['x'][traj==trajlist[i]]).to_numpy()[-1]
         ylast = (data['y'][traj==trajlist[i]]).to_numpy()[-1]
-        plt.annotate(str(trajlist[i]), (xlast+1, ylast+1), color=plt.gca().lines[-1].get_color())
+        plt.annotate(str(int(trajlist[i])), (xlast+1, ylast+1), color=plt.gca().lines[-1].get_color())
     
     return f
 

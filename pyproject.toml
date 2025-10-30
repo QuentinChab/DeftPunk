@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "DeftPunk"
+version = "0.1.0"
+description = "Defect detection and tracking toolkit for nematic textures"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "MIT"}  # or your actual license
+authors = [{name = "Your Name"}]
+
+# Runtime deps for *your library* (not the napari plugin)
+dependencies = [
+  "numpy",
+  "pandas",
+  "matplotlib",
+  "tifffile",      # correct spelling
+  "trackpy",
+  "scipy",
+  "scikit-image",
+]
+
+[tool.setuptools.packages.find]
+include = ["DeftPunk*"]
+
+[tool.setuptools]
+include-package-data = true

@@ -422,6 +422,29 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         if art_vec[0].get_visible():
             art_vec[0].set_visible(False)
         else:
+            # q = art_vec[0]
+            # step = 12
+            # offs = q.get_offsets()
+            # X = getattr(q, "X", None)
+            # Y = getattr(q, "Y", None)
+            # U = q.U
+            # V = q.V
+            # n = min(len(X), len(Y), len(U), len(V), len(offs))
+            # sel = np.arange(0, n, step)#slice(0, None, step)  # every step-th arrow
+            
+            # # keep the sliced arrays
+            # Xs, Ys = X[:n][sel], Y[:n][sel]
+            # Us, Vs = U[:n][sel], V[:n][sel]
+            # XYs = np.c_[Xs, Ys]
+            # q.X = Xs
+            # q.Y = Ys  
+            # q.XY = XYs
+            # q.N = XYs.shape[0]
+        
+
+            # q.set_offsets(XYs)
+            # q.set_UVC(Us, Vs)
+            # q.scale = 0.1
             art_vec[0].set_visible(True)
         fig.canvas.draw_idle()
 

@@ -92,9 +92,9 @@ def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_thres
         chargeb[s]=(np.sum(np.diff(cycle)>np.pi*absolute_threshold)*(-np.pi)+np.sum(np.diff(cycle)<(-np.pi*peak_threshold))*(np.pi)+np.sum(np.diff(cycle)))/(2*np.pi) #sum(diff(cycle)) is usually 0, account for the cases where psi(theta=0)=0 
         if plotall: 
             plt.figure(fdiff)
-            plt.plot(np.diff(cycle)*180/np.pi, '-+', label='Detection', color=ccycle[s])
+            plt.plot(np.diff(cycle)*180/np.pi, '-+', label='Detection')#, color=ccycle[s])
             plt.figure(fabs)
-            plt.plot(np.arange(len(cycle)), cycle*180/np.pi, '-+', color=ccycle[s])
+            plt.plot(np.arange(len(cycle)), cycle*180/np.pi, '-+')#, color=ccycle[s])
             
         #if plotall: plt.plot(np.arange(len(cycle)), cycle, '.', label='Defect %.0f'%(s+1))
     if plotall:
