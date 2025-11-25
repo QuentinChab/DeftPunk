@@ -11,14 +11,20 @@ requires-python = ">=3.9"
 license = {text = "MIT"}  # or your actual license
 authors = [{name = "Your Name"}]
 
+
+
 # Runtime deps for *your library* (not the napari plugin)
 dependencies = [
   "numpy",
   "pandas",
   "matplotlib",
-  "tifffile",      # correct spelling
+  "tifffile",
   "trackpy",
   "scipy",
+]
+
+[project.optional-dependencies]
+full = [
   "scikit-image",
 ]
 
@@ -27,3 +33,6 @@ include = ["DeftPunk*"]
 
 [tool.setuptools]
 include-package-data = true
+
+[tool.setuptools.package-data]
+"DeftPunk" = ["GUI_images/*.jpg", "GUI_images/*.png", "/home/quentin/DeftPunk/DeftPunk/processing/ref_epsilon/*.npy"]

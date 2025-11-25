@@ -21,14 +21,19 @@ In this README, you will find:
 
 //////////////////// 1. How to become a Defect Punk ///////////////////
 
+Quick install with conda (in terminal)
+cd [path_to_DeftPunk]
+conda install -c conda-forge scikit-image
+pip install DeftPunk
+
+Quick run (still in terminal)
+python3 DeftPunk
+
+Details: 
 The necessary packages are:
 - Standard Python libraries (matplotlib, numpy, pandas and scipy)
 - Trackpy
 - scikit-image
-
-Use pip to install the required packages:
-> pip install trackpy
-> pip install -U scikit-image
 
 Versions I use (05/08/2025):
 python 3.13.5
