@@ -22,12 +22,22 @@ In this README, you will find:
 //////////////////// 1. How to become a Defect Punk ///////////////////
 
 Quick install with conda (in terminal)
-cd [path_to_DeftPunk]
-conda install -c conda-forge scikit-image
+cd path/to/DeftPunk
+conda install -c conda-forge scikit-image OR pip install scikit-image
 pip install DeftPunk
 
 Quick run (still in terminal)
 python3 DeftPunk
+
+Quick run (in script)
+>from DeftPunk import detect_defect_GUI
+>detect_defect_GUI()
+(if you use spyder you need to first type "%matpltolib qt" to have interactive window)
+
+Quick run (from IDE)
+run the "__main__.py" file
+
+------------------------------
 
 Details: 
 The necessary packages are:
@@ -35,12 +45,12 @@ The necessary packages are:
 - Trackpy
 - scikit-image
 
-Versions I use (05/08/2025):
+Versions I used (05/08/2025):
 python 3.13.5
-numpy 2.3.1
+numpy 2.1.3 to 2.3.1
 matplotlib 3.10.0
-pandas 2.3.1
-scipy 1.16.0
+pandas 2.2.3 to 2.3.1
+scipy 1.15.3 to 1.16.0
 trackpy 0.7
 scikit-image 0.25.2
 
