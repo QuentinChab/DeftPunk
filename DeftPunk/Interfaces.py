@@ -36,8 +36,6 @@ import os
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 
-
-
 def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='px', vfield=None, endsave=True, savedir='Select'):
     """
     Calls the interface to analyze defect and their anisotropy on an image
@@ -497,7 +495,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         root = tkinter.Tk()
         root.withdraw()  # Hide the empty main window
         root.call('wm', 'attributes', '.', '-topmost', '1') 
-        fold = filedialog.asksaveasfile(defaultextension='.png') # make the user choose a file location
+        fold = filedialog.asksaveasfile(defaultextension='.png', initialdir=os.getcwd()) # make the user choose a file location
         root.destroy()
         if fold:
             figsave.savefig(fold.name) # save figure at this location
@@ -750,7 +748,7 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
         root = tkinter.Tk()
         root.withdraw()
         root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
-        fold = filedialog.asksaveasfilename(defaultextension='.tif') # the user choses a place in file explorer
+        fold = filedialog.asksaveasfilename(defaultextension='.tif', initialdir=os.getcwd()) # the user choses a place in file explorer
         root.destroy()
         
         if fold: # is the user selected a name
@@ -1000,7 +998,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         root.withdraw()
         root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
         # ask the user to browse to select a file
-        fname = filedialog.askopenfilename()
+        fname = filedialog.askopenfilename(initialdir=os.getcwd())
         root.destroy()
         
         if fname: 
@@ -1082,7 +1080,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         root.withdraw()
         root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
         # the user select a directory
-        folder = filedialog.askdirectory()
+        folder = filedialog.askdirectory(initialdir=os.getcwd())
         root.destroy()
         
         # define coupled parameters
