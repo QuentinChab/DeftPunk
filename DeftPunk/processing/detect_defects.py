@@ -117,19 +117,19 @@ def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_thres
         
     if plotall:
         plt.figure()
-        ax = plt.imshow(Qloc, cmap='Blues_r')
+        ax = plt.imshow(Qloc, cmap='Blues_r', vmin=0, vmax=1)
         plt.quiver(np.cos(theta), np.sin(theta), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.1, units='xy', scale=1.2)
         plt.plot(centroidsN[:, 1], centroidsN[:,0], 'o')
         plt.colorbar(ax, label='Order Parameter')
         
         binary_plot = binariN>0
-        cmap = ListedColormap([[183/255,212/255,233/255], [15/255,91/255,163/255]])
+        cmap = ListedColormap([[255/255,255/255,255/255], [15/255,91/255,163/255]])
         plt.figure()
         ax = plt.imshow(binary_plot, cmap=cmap, interpolation='nearest')
         s = theta.shape
         Y, X = np.meshgrid(np.arange(s[0]),np.arange(s[1]))
         # plt.quiver(np.cos(theta), np.sin(theta), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.1, units='xy', scale=1.2)
-        b2 = 1      
+        b2 = 2      
         # plt.quiver(X[int(b2/2)::b2,int(b2/2)::b2], Y[int(b2/2)::b2,int(b2/2)::b2], np.cos(theta[int(b2/2)::b2,int(b2/2)::b2]), np.sin(theta[int(b2/2)::b2,int(b2/2)::b2]), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.1, units='xy', scale=1.2)
         plt.quiver(np.cos(theta), np.sin(theta), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.1, units='xy', scale=1.2)
         # plt.quiver(X[int(b2/2)::b2,int(b2/2)::b2], Y[int(b2/2)::b2,int(b2/2)::b2], np.cos(theta[int(b2/2)::b2,int(b2/2)::b2]), np.sin(theta[int(b2/2)::b2,int(b2/2)::b2]), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=1, units='xy', scale=.1)

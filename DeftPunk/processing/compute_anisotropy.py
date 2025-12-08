@@ -216,36 +216,38 @@ def reference_profile(e):
     
     return ref_th        
         
-def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None):
+def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None, mask=False):
 
     sh = field.shape
     
     # the xcenter/ycenter are the indices of the center
     if xcenter is None:
-        xcenter = round(sh[1]/2)
+        xcenter = (sh[1]-1)/2
     else:
-        xcenter = round(xcenter)
+        xcenter = float(xcenter)
     
     if ycenter is None:
-        ycenter = round(sh[0]/2)
+        ycenter = (sh[0]-1)/2
     else:
-        ycenter = round(ycenter)
+        ycenter = float(ycenter)
         
     #center around middle point
-    xc = xcenter-sh[1]/2
-    yc = ycenter-sh[0]/2
+    xc = xcenter-(sh[1]-1)/2
+    yc = ycenter-(sh[0]-1)/2
     
     # plt.figure()
     # plt.imshow(field, cmap='gray')
     
     #rotate image and coordinates
-    rot_field = scipy.ndimage.rotate(field, -axis*180/np.pi, reshape=True, cval=np.nan)
-    xrotc = xc*np.cos(axis) - yc*np.sin(axis)
-    yrotc = yc*np.cos(axis) + xc*np.sin(axis)
+    #field[field==0] = 1
+    rot_field = scipy.ndimage.rotate(field, -axis*180/np.pi, reshape=True, mode='constant', cval=0, order=1)
+    xrotc = xc*np.cos(axis) + yc*np.sin(axis)
+    yrotc = yc*np.cos(axis) - xc*np.sin(axis)
     # back into indices center
     sh = rot_field.shape
-    xcenter = round(xrotc + sh[1]/2)
-    ycenter = round(yrotc + sh[0]/2)
+    xcenter = round(xrotc + (sh[1]-1)/2)
+    ycenter = round(yrotc + (sh[0]-1)/2)
+    
     
     # plt.figure()
     # plt.imshow(rot_field, cmap='gray')
@@ -255,18 +257,27 @@ def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None):
     #crop
     bigbox = cropsize
     # lx1 = xcenter - max(0, xcenter-bigbox)
-    lx1 = min(bigbox, xcenter)
-    lx2 = min(sh[1]-xcenter, bigbox)
-    ly1 = min(bigbox, ycenter)
-    ly2 = min(sh[0]-ycenter, bigbox)
+    # lx1 = min(bigbox, xcenter)
+    # lx2 = min(sh[1]-xcenter, bigbox)
+    # ly1 = min(bigbox, ycenter)
+    # ly2 = min(sh[0]-ycenter, bigbox)
     # ly1 = ycenter - max(0, ycenter-bigbox)
     # ly2 = min(sh[0]-ycenter, bigbox) + ycenter
-    x1 = xcenter - min(lx1, lx2)
-    x2 = xcenter + min(lx1, lx2)
-    y1 = ycenter - min(ly1, ly2)
-    y2 = ycenter + min(ly1, ly2)
-    padx = bigbox-min(lx1, lx2)
-    pady = bigbox-min(ly1, ly2)
+    
+    x1d = xcenter-bigbox
+    x2d = xcenter+bigbox
+    y1d = ycenter-bigbox
+    y2d = ycenter+bigbox
+    
+    x1 = max(0, x1d)#xcenter - lx1#min(lx1, lx2)
+    x2 = min(sh[1], x2d)#xcenter + lx2#min(lx1, lx2)
+    y1 = max(0, y1d)#ycenter - ly1#min(ly1, ly2)
+    y2 = min(sh[0], y2d)#ycenter + ly2#min(ly1, ly2)
+    
+    padx1 = x1-x1d#max(0, bigbox-xcenter+x1)#max(0,bigbox-lx1)#min(lx1, lx2)
+    pady1 = y1-y1d#max(0, bigbox-ycenter+y1)#max(0,bigbox-ly1)#min(ly1, ly2)
+    padx2 = x2d-x2#max(0,bigbox-lx2)#min(lx1, lx2)
+    pady2 = y2d-y2#max(0,bigbox-ly2)#min(ly1, ly2)
     
     
     xcrop_ = np.arange(x1-xcenter,x2-xcenter)
@@ -278,14 +289,23 @@ def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None):
     # plt.imshow(piece_defect, cmap='gray')
     
     #pad to reach required size
-    piece_defect = np.pad(piece_defect, ((pady, pady), (padx, padx)), mode='constant', constant_values=np.nan)
+    piece_defect = np.pad(piece_defect, ((pady1, pady2), (padx1, padx2)), mode='constant', constant_values=0)
     
     # plt.figure()
     # plt.imshow(piece_defect, cmap='gray')
     # print(piece_defect.shape)
     #rot_field = scipy.ndimage.rotate(piece_defect, -axis*180/np.pi, reshape=False, cval=np.nan)
     
-    return xcrop, ycrop, piece_defect#rot_field
+    
+    if mask:
+        m = np.ones(field.shape)
+        rot_m = scipy.ndimage.rotate(m, -axis*180/np.pi, reshape=True, mode='constant', cval=0, order=1)
+        m = rot_m[y1:y2,x1:x2]
+        m = np.pad(m, ((pady1, pady2), (padx1, padx2)), mode='constant', constant_values=0)
+        #m = m[m>0.5]
+        return xcrop, ycrop, piece_defect, m
+    else:
+        return xcrop, ycrop, piece_defect#rot_field
     
         
     

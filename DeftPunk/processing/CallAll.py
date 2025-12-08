@@ -27,9 +27,13 @@ from scipy.spatial.distance import cdist
 import trackpy as tp
 from math import floor
 from DeftPunk.GUI_utils import load_image
-from .OrientationPy import orientation_analysis
-from .detect_defects import defect_detection
-from .compute_anisotropy import compute_angle_diagram, anisotropy_comparison, track_by_charge, reference_profile
+from DeftPunk.processing.OrientationPy import orientation_analysis
+from DeftPunk.processing.detect_defects import defect_detection
+from DeftPunk.processing.compute_anisotropy import compute_angle_diagram, anisotropy_comparison, track_by_charge, reference_profile
+from DeftPunk.GUI_utils import load_image
+# from .OrientationPy import orientation_analysis
+# from .detect_defects import defect_detection
+# from .compute_anisotropy import compute_angle_diagram, anisotropy_comparison, track_by_charge, reference_profile
 
 plt.rcParams.update({'font.size': 16})
 

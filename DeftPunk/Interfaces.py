@@ -527,6 +527,8 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     # 
     # while plt.fignum_exists(fig.number):
     #     plt.pause(0.1)
+    
+    plt.show()
         
     return defect_char, det_param, vfield, [OKbutton, Savebutton, Circlebutton, Fieldbutton, resetbutton, reversebutton]
         
