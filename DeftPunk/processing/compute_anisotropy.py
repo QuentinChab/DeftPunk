@@ -241,8 +241,8 @@ def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None, mask=F
     #rotate image and coordinates
     #field[field==0] = 1
     rot_field = scipy.ndimage.rotate(field, -axis*180/np.pi, reshape=True, mode='constant', cval=0, order=1)
-    xrotc = xc*np.cos(axis) + yc*np.sin(axis)
-    yrotc = yc*np.cos(axis) - xc*np.sin(axis)
+    xrotc = xc*np.cos(axis) - yc*np.sin(axis)
+    yrotc = yc*np.cos(axis) + xc*np.sin(axis)
     # back into indices center
     sh = rot_field.shape
     xcenter = round(xrotc + (sh[1]-1)/2)
@@ -299,7 +299,7 @@ def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None, mask=F
     
     if mask:
         m = np.ones(field.shape)
-        rot_m = scipy.ndimage.rotate(m, -axis*180/np.pi, reshape=True, mode='constant', cval=0, order=1)
+        rot_m = scipy.ndimage.rotate(m, -axis*180/np.pi, reshape=True, mode='constant', cval=0, order=0)
         m = rot_m[y1:y2,x1:x2]
         m = np.pad(m, ((pady1, pady2), (padx1, padx2)), mode='constant', constant_values=0)
         #m = m[m>0.5]
