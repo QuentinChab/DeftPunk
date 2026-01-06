@@ -16,7 +16,6 @@ import warnings
 
 def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_threshold, plotall=False, method='weighted'):
 
-
     if method == 'weight':
         prop_name = 'centroid_weighted'
     else:
@@ -65,11 +64,11 @@ def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_thres
     #
 
     
-    BigBoxSize  = int(20)
+    #BigBoxSize  = int(20)
     centroidsN  = np.ones((len(props['bbox-0']),2))
     chargeb     = np.ones((len(props['bbox-0'])))
     defect_axis = np.ones((len(props['bbox-0'])))
-    boxes       = np.ones((len(props['bbox-0']),4), dtype=int)
+    #boxes       = np.ones((len(props['bbox-0']),4), dtype=int)
     boxesp      = np.ones((len(props['bbox-0']),4), dtype=int)
     sh          = Angle_Director.shape
     if plotall: 
@@ -78,14 +77,14 @@ def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_thres
     ccycle = ['#827290', '#791C3D']
     for s in range(len(props['bbox-0'])):
         centroidsN[s, :] = [props[prop_name+'-0'][s], props[prop_name+'-1'][s]] 
-        boxesp[s,:] = [max(int(centroidsN[s,0]-BoxSize/2),0),min(int(centroidsN[s,0]+BoxSize/2),sh[0]), max(int(centroidsN[s,1]-BoxSize/2),0),min(int(centroidsN[s,1]+BoxSize/2),sh[1])] #little box size, used right now
+        boxesp[s,:] = [max(round(centroidsN[s,0]-BoxSize/2),0),min(round(centroidsN[s,0]+BoxSize/2)+1,sh[0]), max(round(centroidsN[s,1]-BoxSize/2),0),min(round(centroidsN[s,1]+BoxSize/2)+1,sh[1])] #little box size, used right now
         if method=='min':
             boxQloc = Qloc[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]]
             centroidsN[s,:] = np.array(np.unravel_index(boxQloc.argmin(), boxQloc.shape)) + np.array((boxesp[s,0], boxesp[s,2]))
             boxesp[s,:] = [max(int(centroidsN[s,0]-BoxSize/2),0),min(int(centroidsN[s,0]+BoxSize/2),sh[0]), max(int(centroidsN[s,1]-BoxSize/2),0),min(int(centroidsN[s,1]+BoxSize/2),sh[1])] #little box size, used right now
             
         
-        boxes[s,:] = [int(centroidsN[s,0]-BigBoxSize/2),int(centroidsN[s,0]+BigBoxSize/2), int(centroidsN[s,1]-BigBoxSize/2),int(centroidsN[s,1]+BigBoxSize/2)] #little box size, used right now
+        #boxes[s,:] = [int(centroidsN[s,0]-BigBoxSize/2),int(centroidsN[s,0]+BigBoxSize/2), int(centroidsN[s,1]-BigBoxSize/2),int(centroidsN[s,1]+BigBoxSize/2)] #little box size, used right now
         angles_temp=Angle_Director[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]] #only the selected region
         cycle = np.array([*angles_temp[0,:], *angles_temp[1:,-1], *np.flip(angles_temp[-1,:-1]), *np.flip(angles_temp[1:-1,0])]) % np.pi # borders of the region
         absolute_threshold = peak_threshold#­min(0.9, max(0.5, peak_threshold*np.max(np.diff(cycle))))
@@ -134,6 +133,9 @@ def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_thres
         plt.quiver(np.cos(theta), np.sin(theta), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.1, units='xy', scale=1.2)
         # plt.quiver(X[int(b2/2)::b2,int(b2/2)::b2], Y[int(b2/2)::b2,int(b2/2)::b2], np.cos(theta[int(b2/2)::b2,int(b2/2)::b2]), np.sin(theta[int(b2/2)::b2,int(b2/2)::b2]), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=1, units='xy', scale=.1)
         plt.plot(centroidsN[:, 1], centroidsN[:,0], 'o', color='white', markersize='6')
+        for s in range(len(chargeb)):
+            plt.plot([boxesp[s,2],boxesp[s,3]-1,boxesp[s,3]-1,boxesp[s,2]], [boxesp[s,0],boxesp[s,0],boxesp[s,1]-1,boxesp[s,1]-1])
+            plt.annotate('%.0f: %.1f'%(s,chargeb[s]),(boxesp[s,2],boxesp[s,0]))
         # plt.colorbar(ax)
     #compute orientation of the defect axis
     if True: #previously used method
