@@ -145,18 +145,29 @@ def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_thres
         DyQxy,DxQxy = np.gradient(Qxym)
         
         for s in range(len(chargeb)):
-            if np.abs(chargeb[s]-1/2)<0.2:
-                chargeb[s] = 0.5
-                V1=(DxQxy-DyQxx)[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]]
-                V2=(DxQxx+DyQxy)[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]]
-                defect_axis[s]=np.arctan2(np.mean(V1),np.mean(V2))
-            elif np.abs(chargeb[s]+1/2)<0.2:
-                chargeb[s] = -0.5
-                V1=(-DxQxy-DyQxx)[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]]
-                V2=(DxQxx-DyQxy)[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]]
-                defect_axis[s]=-np.arctan2(np.mean(V1),np.mean(V2))/3
+            q = round(2*chargeb[s])/2
+            if q!=1 and q!=0:
+                th_patch = theta[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]]
+                yp = np.arange(boxesp[s,0],boxesp[s,1])-centroidsN[s,0]
+                xp = np.arange(boxesp[s,2],boxesp[s,3])-centroidsN[s,1]
+                Xp,Yp=np.meshgrid(xp,yp)
+                Phi = np.arctan2(Yp,Xp)
+                defect_axis[s] = np.arctan2(-np.nanmean(np.sin(2*th_patch-2*q*Phi)), np.nanmean(np.cos(2*th_patch-2*q*Phi)))/2/(1-q)%(np.pi/(1-q))
             else:
-                defect_axis[s]=np.nan
+                defect_axis[s] = np.nan
+            
+            # if np.abs(chargeb[s]-1/2)<0.2:
+            #     chargeb[s] = 0.5
+            #     V1=(DxQxy-DyQxx)[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]]
+            #     V2=(DxQxx+DyQxy)[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]]
+            #     defect_axis[s]=np.arctan2(np.mean(V1),np.mean(V2))
+            # elif np.abs(chargeb[s]+1/2)<0.2:
+            #     chargeb[s] = -0.5
+            #     V1=(-DxQxy-DyQxx)[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]]
+            #     V2=(DxQxx-DyQxy)[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]]
+            #     defect_axis[s]=-np.arctan2(np.mean(V1),np.mean(V2))/3
+            # else:
+            #     defect_axis[s]=np.nan
     # else: #doostmohammadi method
         # for s in range(len(chargeb)):
             

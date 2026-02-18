@@ -126,7 +126,7 @@ def one_defect_anisotropy(field, R, xc=None, yc=None, axis = 0, err = 0.05, plot
         plt.xlabel('Anisotropy []')
         plt.ylabel('Cost [rad]')
         plt.tight_layout()
-        
+        __file__ = '/home/quentin/DeftPunk/DeftPunk/processing/opo'
         plt.subplot(1,2,2)
         plt.plot(phi_cycle, th_min, 'o', label='Measure')
         fpath = os.path.abspath(__file__)
@@ -165,7 +165,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
     imgpath : string
         Path to the image.
     R : number, optional
-        Radius of detection for anisotropy computation. 
+        Radius of detection for anisotropy computation in px. 
         The default value is a function of the image size
     sigma : int, optional
         Averaging window for field computation. The default is 25.
@@ -255,7 +255,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
 
         else:
             img = np.ones(prescribed_field.shape)*np.nan
-        
+        __file__ = '/home/quentin/DeftPunk/DeftPunk/processing/opo'
         ## Anisotropy computation 
         # Azimuthal coordinates
         fpath = os.path.abspath(__file__)
@@ -271,7 +271,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
         for i in range(len(chargeb)):
             if np.abs(chargeb[i]-0.5)<0.1:
                 # compute the anisotropy, error, cost and angular profile of a function
-                e_vec_i, err_vec_i, cost_vec_i, th = one_defect_anisotropy(orientation, R, xc=centroidsN[i,1], yc=centroidsN[i,0], axis=defect_axis[i], plotit=plotit)
+                e_vec_i, err_vec_i, cost_vec_i, th = one_defect_anisotropy(orientation, R/bin_, xc=centroidsN[i,1], yc=centroidsN[i,0], axis=defect_axis[i], plotit=plotit)
                 e_vec.append(e_vec_i)
                 err_vec.append(err_vec_i)
                 cost_vec.append(cost_vec_i)
@@ -296,7 +296,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
                 if chargeb[i]==0.5:
                     plt.figure(frange)
                     plt.plot(img_centroids[i,1],img_centroids[i,0],'o')
-                    plt.plot(img_centroids[i,1]+R*bin_*np.cos(phi),img_centroids[i,0]+R*bin_*np.sin(phi), 'r')
+                    plt.plot(img_centroids[i,1]+R*np.cos(phi),img_centroids[i,0]+R*np.sin(phi), 'r')
                     
                     c = colorm(e_vec[indent]+0.5)
                     plt.figure(fmap)
