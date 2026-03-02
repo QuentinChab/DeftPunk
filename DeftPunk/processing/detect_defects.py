@@ -152,7 +152,7 @@ def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_thres
                 xp = np.arange(boxesp[s,2],boxesp[s,3])-centroidsN[s,1]
                 Xp,Yp=np.meshgrid(xp,yp)
                 Phi = np.arctan2(Yp,Xp)
-                defect_axis[s] = np.arctan2(-np.nanmean(np.sin(2*th_patch-2*q*Phi)), np.nanmean(np.cos(2*th_patch-2*q*Phi)))/2/(1-q)%(np.pi/(1-q))
+                defect_axis[s] = np.arctan2(np.nanmean(np.sin(2*th_patch-2*q*Phi)), np.nanmean(np.cos(2*th_patch-2*q*Phi)))/2/(1-q)%(np.pi/(1-q))
             else:
                 defect_axis[s] = np.nan
             

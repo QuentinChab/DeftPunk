@@ -353,7 +353,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
         defect_char['Error'] = np.nan
         incr = 0 # count of +1/2 defects, for e_vec
         for di in range(len(defect_char)):
-            if chargeb[di]==0.5: 
+            if np.abs(chargeb[di]-0.5)<0.2: 
                 # fill the anisotorpy information only for +1/2 defects
                 defect_char.loc[di, 'Anisotropy'] = e_vec[incr]
                 defect_char.loc[di, 'Error'] = err_vec[incr]
@@ -427,7 +427,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
             chargedf = [*chargedf, *defect_char['charge']]
             minddf = [*minddf, *defect_char['MinDist']]
             tdf = [*tdf, *([i]*len(defect_char))]
-            
+                        
             centr = [defect_char['y'], defect_char['x']]
             dist_mat = cdist(centr, centr)
             

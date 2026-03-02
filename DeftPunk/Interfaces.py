@@ -165,7 +165,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     bin_            = round(w/4) # DownSampling size for orientation field
     fsig            = 2 # in units of bin. Size of filter for nematic order parameter computation
     order_threshold = det_param[2]
-    BoxSize         = 8#6
+    BoxSize         = 10#6
     peak_threshold  = 0.75
     
     # if the director field is an input, we lock it: it is never re-computed
