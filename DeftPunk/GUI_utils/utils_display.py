@@ -19,7 +19,7 @@ def create_button(fig, ax_pos, text, func):
     new_button.on_clicked(func) # func is called when button is pressed
     return new_button
 
-def update_display(pos, fig, art_vec, R_vec, field, ax, R, dchar, bin_, fieldcolor='navy'):
+def update_display(pos, fig, art_vec, R_vec, field, ax, R, dchar, d, fieldcolor='navy'):
     """
     When detection is updated in the detection interface.
 
@@ -42,7 +42,7 @@ def update_display(pos, fig, art_vec, R_vec, field, ax, R, dchar, bin_, fieldcol
         DESCRIPTION.
     dchar : Pandas DataFrame
         Table containing defect informations from detection.
-    bin_ : int
+    d : int
         Pooling factor between image and director field.
     fieldcolor : STR, optional
         Color to draw director field. The default is 'navy'.
@@ -67,7 +67,7 @@ def update_display(pos, fig, art_vec, R_vec, field, ax, R, dchar, bin_, fieldcol
     
     ### Draw
     # Draw director field
-    art_vec[0] = ax.quiver(pos[0], pos[1], np.cos(field), np.sin(field), angles='xy', pivot='mid', headlength=0, headaxislength=0, scale_units='xy', scale=1/bin_ , color=fieldcolor, visible=vis)
+    art_vec[0] = ax.quiver(pos[0], pos[1], np.cos(field), np.sin(field), angles='xy', pivot='mid', headlength=0, headaxislength=0, scale_units='xy', scale=1/d , color=fieldcolor, visible=vis)
     # draw defects
     art_vec_new,R_vec_new = draw_defects(ax, dchar, R=R, R_vis=R_vis)
     

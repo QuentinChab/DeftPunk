@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 import warnings
 
-def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_threshold, plotall=False, method='weighted'):
+def defect_detection(theta, coherency, av_scale, BoxSize, order_threshold, peak_threshold, plotall=False, method='weighted'):
 
     if method == 'weight':
         prop_name = 'centroid_weighted'
@@ -31,12 +31,12 @@ def defect_detection(theta, coherency, fov, BoxSize, order_threshold, peak_thres
     mvec_y1=np.sin(theta)
     Angle_Director = np.arctan(mvec_y1/mvec_x1) #just theta ? But projected on one part of the trigo circle
     
-    # Qloc evaluate whether orientation field is well-defined at each point with a window of size fov            
-    Qloc=np.sqrt(gaussian_filter(np.cos(2*theta),fov)**2+gaussian_filter(np.sin(2*theta),fov)**2)
-    #ndir = np.arctan2(uniform_filter(np.sin(2*theta), fov), uniform_filter(np.cos(2*theta), fov))/2
+    # Qloc evaluate whether orientation field is well-defined at each point with a window of size av_scale            
+    Qloc=np.sqrt(gaussian_filter(np.cos(2*theta),av_scale)**2+gaussian_filter(np.sin(2*theta),av_scale)**2)
+    #ndir = np.arctan2(uniform_filter(np.sin(2*theta), av_scale), uniform_filter(np.cos(2*theta), av_scale))/2
     #thdif = np.arctan2(np.sin(2*ndir-2*theta), np.cos(2*ndir-2*theta))/2
     #s = (3*np.cos(thdif)**2-1)/2
-    #Qloc=gaussian_filter(s, fov)
+    #Qloc=gaussian_filter(s, av_scale)
     if plotall:
         sh = Qloc.shape
         X, Y = np.meshgrid(range(sh[1]), range(sh[0]))
@@ -252,7 +252,7 @@ def findParametrizedCirclePoint(circRad, cpos):
 # BoxSize = int(8)
 # peak_threshold = 0.2
 # order_threshold = 0.2
-# fov =  2
+# av_scale =  2
 # orientationTable = np.loadtxt(r'C:\Users\Quentin\Documents\Analysis\Defect_detection_test\orientation_tables\Exercise_5\Fig3_s10_grid20.csv', delimiter = ',', skiprows=1)
 # image = plt.imread(r'C:\Users\Quentin\Documents\Analysis\Defect_detection_test\images\Exercise_5\Fig3.tif')
 # theta_list = orientationTable[:,5]

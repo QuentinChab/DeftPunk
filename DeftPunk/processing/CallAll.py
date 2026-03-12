@@ -141,7 +141,7 @@ def one_defect_anisotropy(field, R, xc=None, yc=None, axis = 0, err = 0.05, plot
     
     return emin, err_e, costmin, th_min
    
-def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_threshold=0.25, peak_threshold=0.75, prescribed_field=None, plotit=False, stack=False, savedir = None, give_field=False):
+def get_anisotropy(imgpath, R=np.nan, w_size=25, d=4, av_scale=2, BoxSize=6, order_threshold=0.25, peak_threshold=0.75, prescribed_field=None, plotit=False, stack=False, savedir = None, give_field=False):
     """
     From an image/path to an image or stack, compute the director field, detect the 
     defects and the anisotropy for +1/2 images
@@ -149,7 +149,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
     (In inteface, some parameters are coupled with others)
     
     copy-paste:
-    e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = get_anisotropy(imgpath, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False, savedir = None)
+    e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = get_anisotropy(imgpath, R, w_size, d, av_scale, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False, savedir = None)
 
     It is organize as such:
         - Handle image output
@@ -167,11 +167,11 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
     R : number, optional
         Radius of detection for anisotropy computation in px. 
         The default value is a function of the image size
-    sigma : int, optional
+    w_size : int, optional
         Averaging window for field computation. The default is 25.
-    bin_ : int, optional
+    d : int, optional
         binning of the field wrt image size. The default is 4.
-    fov : int, optional
+    av_scale : int, optional
         Averaging window (on the field) for defect detection. The default is 2.
     BoxSize : int, optional
         Box size for defect charge computation. The default is 6.
@@ -229,7 +229,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
     if not stack: 
         ## If the director field is not an input, compute it        
         if prescribed_field is None:
-            orientation, coherency, energy, x, y = orientation_analysis(img, sigma, bin_, plotit)        
+            orientation, coherency, energy, x, y = orientation_analysis(img, w_size, d, plotit)        
         else:
             orientation = prescribed_field
             print(prescribed_field)
@@ -240,17 +240,17 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
             x, y = np.meshgrid(x_, y_)     
         
         ## Peform detection of defects
-        Qloc, boxes, chargeb, defect_axis, centroidsN = defect_detection(orientation, coherency, fov, BoxSize, order_threshold, peak_threshold, plotall=plotit, method='weighted')
+        Qloc, boxes, chargeb, defect_axis, centroidsN = defect_detection(orientation, coherency, av_scale, BoxSize, order_threshold, peak_threshold, plotall=plotit, method='weighted')
     
         # convert 
         if not (img is None):
-            # convert centroids from director field coordinates to image coordinates (multiply by bin_)
+            # convert centroids from director field coordinates to image coordinates (multiply by d)
             N = img.shape
-            x1 = round((bin_ + N[0]-bin_*floor(N[0]/bin_))/2) # To be like OrientationJ. 
-            y1 = round((bin_ + N[1]-bin_*floor(N[1]/bin_))/2)
+            x1 = round((d + N[0]-d*floor(N[0]/d))/2) # To be like OrientationJ. 
+            y1 = round((d + N[1]-d*floor(N[1]/d))/2)
             img_centroids = np.empty(centroidsN.shape)
-            img_centroids[:,0] = centroidsN[:,0]*bin_+x1
-            img_centroids[:,1] = centroidsN[:,1]*bin_+y1
+            img_centroids[:,0] = centroidsN[:,0]*d+x1
+            img_centroids[:,1] = centroidsN[:,1]*d+y1
             
 
         else:
@@ -271,7 +271,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
         for i in range(len(chargeb)):
             if np.abs(chargeb[i]-0.5)<0.2:
                 # compute the anisotropy, error, cost and angular profile of a function
-                e_vec_i, err_vec_i, cost_vec_i, th = one_defect_anisotropy(orientation, R/bin_, xc=centroidsN[i,1], yc=centroidsN[i,0], axis=defect_axis[i], plotit=plotit)
+                e_vec_i, err_vec_i, cost_vec_i, th = one_defect_anisotropy(orientation, R/d, xc=centroidsN[i,1], yc=centroidsN[i,0], axis=defect_axis[i], plotit=plotit)
                 e_vec.append(e_vec_i)
                 err_vec.append(err_vec_i)
                 cost_vec.append(cost_vec_i)
@@ -301,7 +301,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
                     c = colorm(e_vec[indent]+0.5)
                     plt.figure(fmap)
                     plt.quiver(img_centroids[i,1], img_centroids[i,0], np.cos(defect_axis[i]), np.sin(defect_axis[i]), angles='xy', color=c)
-                    plt.annotate('%.2f'%(e_vec[indent]), (img_centroids[i,1]+bin_, img_centroids[i,0]+bin_), color = c, fontsize='small')
+                    plt.annotate('%.2f'%(e_vec[indent]), (img_centroids[i,1]+d, img_centroids[i,0]+d), color = c, fontsize='small')
                     indent += 1
     
                 elif chargeb[i]==-0.5:
@@ -323,7 +323,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
         ## Compute distance to nearest defect
         ndef = len(chargeb)
         closest_neighbor = np.ones(ndef)*np.nan
-        centroids_stack = [centroidsN[:,0]*bin_, centroidsN[:,1]*bin_]
+        centroids_stack = [centroidsN[:,0]*d, centroidsN[:,1]*d]
         
         if ndef>2: #if more than 2 defects on the frame
             coord = np.array(centroids_stack).T
@@ -347,8 +347,8 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
         defect_char = pd.DataFrame()
         defect_char['charge'] = chargeb
         defect_char['axis'] = defect_axis
-        defect_char['x'] = centroidsN[:,1]*bin_
-        defect_char['y'] = centroidsN[:,0]*bin_
+        defect_char['x'] = centroidsN[:,1]*d
+        defect_char['y'] = centroidsN[:,0]*d
         defect_char['Anisotropy'] = np.nan
         defect_char['Error'] = np.nan
         incr = 0 # count of +1/2 defects, for e_vec
@@ -407,7 +407,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
                 input_field = None
             
             # perform detection for frame i
-            e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = get_anisotropy(img[i], R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=plotit, prescribed_field=input_field, stack=False)
+            e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = get_anisotropy(img[i], R, w_size, d, av_scale, BoxSize, order_threshold, peak_threshold, plotit=plotit, prescribed_field=input_field, stack=False)
             # add to lists of lists
             e_stack.append(e_vec)
             err_stack.append(err_vec)
@@ -482,13 +482,13 @@ def analyze_image(imgpath, feature_size, R, order_threshold, prescribed_field=No
     """
     
     # Coupling
-    bin_    = round(feature_size/4)
-    sigma   = round(feature_size*1.5)
+    d       = round(feature_size/4)
+    w_size  = round(feature_size*1.5)
     
     # calls get_anisotropy
-    return  get_anisotropy(imgpath, R, sigma, bin_, order_threshold=order_threshold, prescribed_field=prescribed_field, plotit=plotit, stack=stack, savedir = savedir, give_field=give_field)
+    return  get_anisotropy(imgpath, R, w_size, d, order_threshold=order_threshold, prescribed_field=prescribed_field, plotit=plotit, stack=stack, savedir = savedir, give_field=give_field)
     
-def anisotropy_on_directory(dirname, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, R, plotf = True):
+def anisotropy_on_directory(dirname, w_size, d, av_scale, BoxSize, order_threshold, peak_threshold, R, plotf = True):
     """
     Apply the get_anisotropy function on all files in the provided folder.
 
@@ -496,12 +496,12 @@ def anisotropy_on_directory(dirname, sigma, bin_, fov, BoxSize, order_threshold,
     ----------
     dirname : string
         Path to directory on which we loop.
-    sigma : float
+    w_size : float
         Size of the matrix on which we compute the structure tensor in order
         to compute the director field of the image.
-    bin_ : int
+    d : int
         Downsampling of the director field with respect to the pixels in image.
-    fov : float
+    av_scale : float
         Standard deviation of the gaussian filter used to compute the average 
         order parameter on the director field. In unit of director field.
     BoxSize : int
@@ -540,8 +540,8 @@ def anisotropy_on_directory(dirname, sigma, bin_, fov, BoxSize, order_threshold,
     e_field_av = []
     
     for fname in os.listdir(dirname):
-        e_, err_vec, cost_vec, theta_, phi, _ = get_anisotropy(dirname+os.sep+fname, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
-        # e_field, err_vec, cost_vec, theta_field, phi = get_anisotropy(dirname+os.sep+fname, True, R, sigma, bin_, fov, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
+        e_, err_vec, cost_vec, theta_, phi, _ = get_anisotropy(dirname+os.sep+fname, R, w_size, d, av_scale, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
+        # e_field, err_vec, cost_vec, theta_field, phi = get_anisotropy(dirname+os.sep+fname, True, R, w_size, d, av_scale, BoxSize, order_threshold, peak_threshold, plotit=False, stack=False)
         e_vec = [*e_vec, *e_]
         th_vec = [*th_vec, *theta_]
         # e_field_av.append(e_field)

@@ -20,19 +20,19 @@ import string
 import math
 import tifffile as tf
 
-def dominant_direction(img, sigma):
+def dominant_direction(img, w_size):
     """OrientationsJ's dominant direction"""
     axx, axy, ayy = feature.structure_tensor(
-        img.astype(np.float32), sigma=sigma, mode="reflect"
+        img.astype(np.float32), sigma=w_size, mode="reflect"
     )
     dom_ori = np.arctan2(2 * axy.mean(), (ayy.mean() - axx.mean())) / 2
     return np.rad2deg(dom_ori)
 
-def orientation_analysis(img, sigma, binning, plotf=False, mode='downsample'):    
+def orientation_analysis(img, w_size, d, plotf=False, mode='downsample'):    
     """Input
     img     = image or path to image
-    sigma   = I think it refers to the size of the box on which you determine the direction
-    binning = How much you downsize your arrow orientation display with respect to the image size
+    w_size  = I think it refers to the size of the box on which you determine the direction
+    d       = How much you downsize your arrow orientation display with respect to the image size
     plotf   = Do you want to plot the image with overlayed orientation arrays?
     &
     same as OrientationJ's output for
@@ -41,7 +41,7 @@ def orientation_analysis(img, sigma, binning, plotf=False, mode='downsample'):
     - energy
     
     call
-    orientation, coherence, ene, X, Y = orientation_analysis(img, sigma, binning, plotf=False)
+    orientation, coherence, ene, X, Y = orientation_analysis(img, w_size, d, plotf=False)
     
     To display:
     plt.figure()
@@ -63,10 +63,10 @@ def orientation_analysis(img, sigma, binning, plotf=False, mode='downsample'):
     eps = 1e-20
     
     axx, axy, ayy = feature.structure_tensor(
-        img.astype(np.float32), sigma=sigma, mode="reflect", order='rc'
+        img.astype(np.float32), sigma=w_size, mode="reflect", order='rc'
     )
     A = feature.structure_tensor(
-        img.astype(np.float32), sigma=sigma, mode="reflect", order='rc'
+        img.astype(np.float32), sigma=w_size, mode="reflect", order='rc'
     )
     #plt.imshow(A)
     #print(axy)
@@ -79,11 +79,11 @@ def orientation_analysis(img, sigma, binning, plotf=False, mode='downsample'):
     ene = np.sqrt(axx + ayy)
     ene /= ene.max()
 
-    xbin = int(binning) 
-    ybin = int(binning)
+    xbin = int(d) 
+    ybin = int(d)
     N = img.shape
     
-    # find the closest integer binning (greedy algorithm)
+    # find the closest integer d (greedy algorithm)
     # while N[0]%xbin != 0:
     #     xbin-=1
     # while N[1]%ybin != 0:
@@ -91,13 +91,13 @@ def orientation_analysis(img, sigma, binning, plotf=False, mode='downsample'):
     
     if mode=='pool':
         # Pool instead of downsample
-        thx = skimage.measure.block_reduce(np.cos(2*ori), (binning, binning), func=np.mean)
-        thy = skimage.measure.block_reduce(np.sin(2*ori), (binning, binning), func=np.mean)
+        thx = skimage.measure.block_reduce(np.cos(2*ori), (d, d), func=np.mean)
+        thy = skimage.measure.block_reduce(np.sin(2*ori), (d, d), func=np.mean)
         orientation = np.arctan2(thy, thx)/2 - np.pi/2
-        coherence = skimage.measure.block_reduce(coh, (binning, binning), func=np.mean)
+        coherence = skimage.measure.block_reduce(coh, (d, d), func=np.mean)
         W, H = orientation.shape
-        x_coords = np.arange(binning/2, H*binning, binning)
-        y_coords = np.arange(binning/2, W*binning, binning)
+        x_coords = np.arange(d/2, H*d, d)
+        y_coords = np.arange(d/2, W*d, d)
         X, Y = np.meshgrid(x_coords, y_coords)  # Shape: (H//b, W//b)
     elif mode=='downsample':
         # In the image representation the axis are not the same as in plot representation 
@@ -130,7 +130,7 @@ def orientation_analysis(img, sigma, binning, plotf=False, mode='downsample'):
         plt.figure()
         plt.imshow(img, cmap='gray')
         # plt.gca().invert_yaxis()
-        plt.quiver(X[int(b2/2)::b2,int(b2/2)::b2], Y[int(b2/2)::b2,int(b2/2)::b2], np.cos(orientation[int(b2/2)::b2,int(b2/2)::b2]), np.sin(orientation[int(b2/2)::b2,int(b2/2)::b2]), angles='xy', scale=1/binning, width=6, headaxislength=0, headlength=0, pivot='mid', color='#D74E09', units='xy')
+        plt.quiver(X[int(b2/2)::b2,int(b2/2)::b2], Y[int(b2/2)::b2,int(b2/2)::b2], np.cos(orientation[int(b2/2)::b2,int(b2/2)::b2]), np.sin(orientation[int(b2/2)::b2,int(b2/2)::b2]), angles='xy', scale=1/d, width=6, headaxislength=0, headlength=0, pivot='mid', color='#D74E09', units='xy')
         plt.axis('equal')
         plt.axis('off')
         # headaxislength = 0 and headlength=0 to remove arrows

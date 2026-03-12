@@ -192,9 +192,9 @@ def datasave(dchar, d_param, t_param=None, units=[1, 'px', 1, 'frame'], savedir=
                 f.write('At '+str(now_)) # write the time
                 # write detection parameters if they are provided
                 if not d_param is None:
-                    f.write('\nfeature size = %.0f '%(d_param[0]*unit_per_px)+unit)
-                    f.write('\nnematic order threshold = %.2f '%(d_param[2]))
-                    f.write('\nDetection Radius = %.0f '%(d_param[1]*unit_per_px)+unit)
+                    f.write('\nFeature size = %.0f '%(d_param[0]*unit_per_px)+unit)
+                    f.write('\nNematic order threshold = %.2f '%(d_param[2]))
+                    f.write('\nPhase contour Radius = %.0f '%(d_param[1]*unit_per_px)+unit)
                 # write tracking parameter if they are provided
                 if not (t_param is None):
                     f.write('\nsearch range = %.0f '%(t_param[0]*unit_per_px)+unit)
