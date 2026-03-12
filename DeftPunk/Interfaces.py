@@ -1191,7 +1191,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
     trackbutton = gu.create_button(fig, [0.05, 0.6, 0.25, 0.07], 'Check_tracking', check_track)
     savebutton  = gu.create_button(fig, [0.05, 0.5, 0.25, 0.07], 'Save Data', savedat)
     dirbutton   = gu.create_button(fig, [0.05, 0.4, 0.25, 0.07], 'Apply on\n directory', on_directory)
-    statbutton  = gu.create_button(fig, [0.05, 0.3, 0.25, 0.07], 'Statistics', stat_func)
+    #statbutton  = gu.create_button(fig, [0.05, 0.3, 0.25, 0.07], 'Statistics', stat_func)
     
     
     ##################### Unit boxes creation ###############################

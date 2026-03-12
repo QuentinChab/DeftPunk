@@ -269,7 +269,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
         fields      = []
         
         for i in range(len(chargeb)):
-            if np.abs(chargeb[i]-0.5)<0.1:
+            if np.abs(chargeb[i]-0.5)<0.2:
                 # compute the anisotropy, error, cost and angular profile of a function
                 e_vec_i, err_vec_i, cost_vec_i, th = one_defect_anisotropy(orientation, R/bin_, xc=centroidsN[i,1], yc=centroidsN[i,0], axis=defect_axis[i], plotit=plotit)
                 e_vec.append(e_vec_i)
@@ -439,7 +439,7 @@ def get_anisotropy(imgpath, R=np.nan, sigma=25, bin_=4, fov=2, BoxSize=6, order_
         # List of anisotropy only contain +1/2 info, and then are smaller in size
         # than the target table defectdf. We intercalate nan at non-+1/2 positions 
         for i in range(len(chargedf)):
-            if np.abs(chargedf[i]-1/2)>0.1:
+            if np.abs(chargedf[i]-1/2)>0.2:
                 edf = [*edf[:i], np.nan, *edf[i:]]
                 errdf = [*errdf[:i], np.nan, *errdf[i:]]
         
