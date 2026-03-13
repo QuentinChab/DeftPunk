@@ -165,41 +165,41 @@ def datasave(dchar, d_param, t_param=None, units=[1, 'px', 1, 'frame'], savedir=
             root.destroy()
         else:
             fold = savedir
-            
+          
+        _save_dat_and_param(fold, dchar, d_param, t_param, units)
         
-        if fold:
-            unit_per_px, unit, unit_per_frame, unit_t = units
-            
-            
-            #re-index particle column in order for mind satisfaction
-            if 'particle' in dchar.columns:
-                defect_char_to_save = tp.filter_stubs(dchar, t_param[2])
-                part_vec = defect_char_to_save['particle'].to_numpy()
-                part_list = np.unique(part_vec)
-                for i in range(len(part_list)):
-                    defect_char_to_save.loc[part_vec==part_list[i], 'particle']=i
-            else:
-                
-                defect_char_to_save = dchar
-            
-            ## saves the table into a csv
-            defect_char_to_save.to_csv(fold)
-            
-            ## save the parameters into a txt folder
-            paramfile = '.'.join(fold.split('.')[:-1]) + '_parameters.txt'
-            now_ = datetime.datetime.now()
-            with open(paramfile, "a") as f:
-                f.write('At '+str(now_)) # write the time
-                # write detection parameters if they are provided
-                if not d_param is None:
-                    f.write('\nFeature size = %.0f '%(d_param[0]*unit_per_px)+unit)
-                    f.write('\nNematic order threshold = %.2f '%(d_param[2]))
-                    f.write('\nPhase contour Radius = %.0f '%(d_param[1]*unit_per_px)+unit)
-                # write tracking parameter if they are provided
-                if not (t_param is None):
-                    f.write('\nsearch range = %.0f '%(t_param[0]*unit_per_px)+unit)
-                    f.write('\nmemory = %.0f '%(t_param[1]*unit_per_frame) + unit_t)
-                    f.write('\nfilter (minimum trajectory length) = %.0f '%(t_param[2]*unit_per_frame)+unit_t)
-            print('Data Saved')
+def _save_dat_and_param(savedir, dchar, d_param, t_param=None, units=[1, 'px', 1, 'frame']):
+        unit_per_px, unit, unit_per_frame, unit_t = units
+        
+        
+        #re-index particle column in order for mind satisfaction
+        if 'particle' in dchar.columns:
+            defect_char_to_save = tp.filter_stubs(dchar, t_param[2])
+            part_vec = defect_char_to_save['particle'].to_numpy()
+            part_list = np.unique(part_vec)
+            for i in range(len(part_list)):
+                defect_char_to_save.loc[part_vec==part_list[i], 'particle']=i
         else:
-            print('Saving cancelled')
+            
+            defect_char_to_save = dchar
+        
+        ## saves the table into a csv
+        defect_char_to_save.to_csv(savedir)
+        
+        ## save the parameters into a txt folder
+        paramfile = '.'.join(savedir.split('.')[:-1]) + '_parameters.txt'
+        now_ = datetime.datetime.now()
+        with open(paramfile, "a") as f:
+            f.write('At '+str(now_)) # write the time
+            # write detection parameters if they are provided
+            if not d_param is None:
+                f.write('\nFeature size = %.0f '%(d_param[0]*unit_per_px)+unit)
+                f.write('\nNematic order threshold = %.2f '%(d_param[2]))
+                f.write('\nPhase contour Radius = %.0f '%(d_param[1]*unit_per_px)+unit)
+            # write tracking parameter if they are provided
+            if not (t_param is None):
+                f.write('\nsearch range = %.0f '%(t_param[0]*unit_per_px)+unit)
+                f.write('\nmemory = %.0f '%(t_param[1]*unit_per_frame) + unit_t)
+                f.write('\nfilter (minimum trajectory length) = %.0f '%(t_param[2]*unit_per_frame)+unit_t)
+        print('Data Saved')
+        

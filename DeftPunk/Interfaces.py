@@ -162,10 +162,10 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     
     ### All necessary detection parameters. The 3 selected ones (f, R, o) define all others: ####
     w_size          = round(1.5*w) #integration size for orientation field
-    d               = round(w/4) # DownSampling size for orientation field
-    av_scale        = 2 # in units of d. Size of filter for nematic order parameter computation
+    d               = round(w/4)   # DownSampling size for orientation field
+    av_scale        = 2            # in units of d. Size of filter for nematic order parameter computation
     order_threshold = det_param[2]
-    BoxSize         = 10#6
+    BoxSize         = 6
     peak_threshold  = 0.75
     
     # if the director field is an input, we lock it: it is never re-computed
@@ -173,7 +173,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         lock_field = True
     else:
         lock_field = False
-     
+    
     img_st, stack, _ = gu.load_image(imgpath)
     if stack:
         img = img_st[frame]
@@ -193,7 +193,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     
     fig, ax     = plt.subplots()
     
-    # image 
+    # Display initial image 
     if not (img is None):
         back_img = plt.imshow(img, cmap='binary')
     # define director field display
@@ -228,7 +228,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     ############################# Sliders creation ##########################
     
     ## Creation of slider interactive objects
-    # handle slider display. If physical units are provide display conversion
+    # handle slider display. If physical units are provided, display conversion
     if unit=='px':
         labw = 'Feature size [px]'
         labR = "Phase contour\n radius $R$ [px]"
@@ -420,29 +420,6 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         if art_vec[0].get_visible():
             art_vec[0].set_visible(False)
         else:
-            # q = art_vec[0]
-            # step = 12
-            # offs = q.get_offsets()
-            # X = getattr(q, "X", None)
-            # Y = getattr(q, "Y", None)
-            # U = q.U
-            # V = q.V
-            # n = min(len(X), len(Y), len(U), len(V), len(offs))
-            # sel = np.arange(0, n, step)#slice(0, None, step)  # every step-th arrow
-            
-            # # keep the sliced arrays
-            # Xs, Ys = X[:n][sel], Y[:n][sel]
-            # Us, Vs = U[:n][sel], V[:n][sel]
-            # XYs = np.c_[Xs, Ys]
-            # q.X = Xs
-            # q.Y = Ys  
-            # q.XY = XYs
-            # q.N = XYs.shape[0]
-        
-
-            # q.set_offsets(XYs)
-            # q.set_UVC(Us, Vs)
-            # q.scale = 0.1
             art_vec[0].set_visible(True)
         fig.canvas.draw_idle()
 

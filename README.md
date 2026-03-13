@@ -7,7 +7,7 @@
 // Last Update: 05/08/2025
 //////////
 
-DeftPunk is a Python package that provides tools and graphical interfaces for analyzing images of nematic systems. It identifies and tracks topological defects (such as ±1/2, ±1 charges), estimates their orientation, and measures the anisotropy between splay and bend elastic moduli.
+DeftPunk is a Python package that provides tools and graphical interfaces for analyzing images of nematic surfaces. It identifies and tracks topological defects (such as ±1/2, ±1), estimates their orientation, and measures the anisotropy between splay and bend elastic moduli.
 These tools are particularly useful for researchers working in soft matter physics, liquid crystals, or active matter, aiming to quantitatively characterize defect dynamics in experimental or simulated systems.
 
 In this README, you will find:
@@ -24,14 +24,14 @@ In this README, you will find:
 Quick install with conda (in terminal)
 cd path/to/DeftPunk
 conda install -c conda-forge scikit-image OR pip install scikit-image
-pip install DeftPunk
+pip install .
 
 Quick run (still in terminal)
 python3 DeftPunk
 
 Quick run (in script)
 >from DeftPunk import detect_defect_GUI
->detect_defect_GUI()
+>_ =detect_defect_GUI()
 (if you use spyder you need to first type "%matpltolib qt" to have interactive window)
 
 Quick run (from IDE)
@@ -57,11 +57,11 @@ scikit-image 0.25.2
 
 //////////////////// 2. Run main interfaces and functions ///////////////////
 You can use DeftPunk in three different ways, depending on your preferences and platform.
-Notes
-- The interface (method 1) does not work on Mac.
-- Make sure to add the DeftPunk folder to your Python path or run from the correct working directory.
-
-GUI Interface method (see main.py):
+(1): through interface (does not work on mac)
+(2): programatically
+(3): mixed
+_______________________________________
+(1) Interface method (see main.py): the detect_defect_GUI() function
 [Windows/Linux only]
 Interactive analysis with minimal coding.
 Open the main interface using:
@@ -70,24 +70,40 @@ Open the main interface using:
 This will launch an interface for loading images, choosing parameters visually.
 See section 4 for detailed buttons and sliders.
 
-Semi-programmatic (see Example.py):
-> from DeftPunk import defect_analyzer
-> defect_char, det_param, vfield, _ = defect_analyzer(
->    imgpath="path/to/image.tif",
->    det_param=[feature_size, R, order_threshold],
->    stack=True,
->    frame=0
->    savedir='path/savepath'
-> )
-Opens an interface to tune parameter from input image.
-
-Fully programmatic (See Example_No_GUI.py):
+_______________________________________
+(2) Programmatic way: the analyze_image() function
 > from DeftPunk import analyze_image
 > e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = analyze_image(
 >     imgpath="path/to/image.tif",
 >     feature_size=10,
 >     R=20,
 >     order_threshold=0.7,
+>     plotit=True,
+>     savedir="path/to/output/"
+> )
+Note: you need to know the parameters in advance
+Note2: you can directly input a stack
+
+___________________________________________
+(3) Mixed way (use interface to choose parameter and then compute the stack with analyze_image)
+> from DeftPunk import defect_analyzer, analyze_image
+> # Choose the parameters with interface
+> # on one image
+> img = imread('path/to/img') #stack
+> defect_char, det_param, vfield, _ = defect_analyzer(
+>    imgpath=img[0],
+>    det_param=[feature_size, R, order_threshold],
+>    stack=True,
+>    frame=0
+>    savedir='path/savepath'
+> )
+> 
+> # Then compute the stack
+> e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = analyze_image(
+>     imgpath=img,
+>     feature_size=det_param[0],
+>     R=det_param[2],
+>     order_threshold=det_param[1],
 >     plotit=True,
 >     savedir="path/to/output/"
 > )
@@ -139,7 +155,7 @@ Here is the description of the detection parameters:
     if a region has s < order_threshold, we consider that one defect is present
     if it is too low, you may miss some defects
     if it is too high, you may have false positives and have two defect "fuse" (the s < threshold region associated with each defect fuse together)
-- R:
+- Contour radius R:
     the Anisotropy is computed with the shape of the defect
     the shape is represented as the director angle along a contour around the defect
     R is the radius of the circular contour
@@ -161,7 +177,7 @@ Buttons
 - Load:
     Open a browser to load an image to analyze
     You can also load a dataset to then skip analysis
-    You can as well load a director field (may be unstable)
+    You can as well load a director field (unstable)
 - Start Detection:
     Open detection interface
 - Check tracking:
@@ -171,8 +187,6 @@ Buttons
 - Apply on directory:
     Open a browser for user to select a folder. 
     The detection is applied to every image in the folder with previously chosen parameters
-- Statistics:
-    Apply some statistics to the computed data
 Fields
 - Let you chose the units and conversion factors for time and space
 Slider
