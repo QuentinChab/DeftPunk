@@ -65,7 +65,7 @@ def plot_defect_map(centroids, chargedef, axisdef, img = [], xfield= [], yfield 
 
     """
     
-    f, ax  = plt.subplots()
+    f, ax  = plt.subplots(figsize=(8,8))
     if len(img)>0:
         plt.imshow(img, cmap=cimg)
         sc = len(vfield)/len(img)
@@ -117,6 +117,7 @@ def plot_defect_map(centroids, chargedef, axisdef, img = [], xfield= [], yfield 
         #else:
             #plt.plot(centroids[i,1], centroids[i,0], 'o', color = cother)
     
+    ax.axis('off')
     if plot_cbar:
         plt.colorbar(cm.ScalarMappable(norm=Normalize(-lim, lim), cmap=e_map), label='Anisotropy []', ax=ax)
         
