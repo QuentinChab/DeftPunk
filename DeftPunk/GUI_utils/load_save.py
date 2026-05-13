@@ -21,9 +21,9 @@ import os
 import tifffile as tf
 import matplotlib.pyplot as plt
 import numpy as np
-import tkinter
 import trackpy as tp
 import datetime
+from qtpy.QtWidgets import QFileDialog
 
 
 def load_image(imgpath, channel=0):
@@ -119,6 +119,7 @@ def load_image(imgpath, channel=0):
             img = np.mean(img, axis=-1)
         else: # otherwise the channel can be selected
             img = img[::,channel]
+
     
     return img, stack, units
 
@@ -158,11 +159,19 @@ def datasave(dchar, d_param, t_param=None, units=[1, 'px', 1, 'frame'], savedir=
     else: 
         # calls a file explorer that ask where to save the data
         if (savedir is None) or (savedir=='Select'):
-            root = tkinter.Tk()
-            root.withdraw()
-            root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
-            fold = tkinter.filedialog.asksaveasfilename(defaultextension='.csv')
-            root.destroy()
+
+            fold, _ = QFileDialog.getSaveFileName(
+                None,
+                "Save CSV",
+                "",
+                "CSV files (*.csv)"
+            )
+            
+            # root = tkinter.Tk()
+            # root.withdraw()
+            # root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
+            # fold = tkinter.filedialog.asksaveasfilename(defaultextension='.csv')
+            # root.destroy()
         else:
             fold = savedir
           

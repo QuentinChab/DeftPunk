@@ -26,9 +26,8 @@ import DeftPunk.Analysis as an
 import DeftPunk.GUI_utils as gu
 import tifffile as tf
 from matplotlib import cm
+from qtpy.QtWidgets import QFileDialog
 from matplotlib.colors import Normalize
-import tkinter
-from tkinter import filedialog
 import trackpy as tp
 from matplotlib.animation import FuncAnimation
 import scipy.io
@@ -469,11 +468,20 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         axsave.set_ylim(ax.get_ylim())
         # Write parameters as title
         axsave.set_title('feature size = %.0f px, R = %.0f px\norder threshold = %.2f'%(w_slider.val, R_slider.val, Thresh_slider.val))
-        root = tkinter.Tk()
-        root.withdraw()  # Hide the empty main window
-        root.call('wm', 'attributes', '.', '-topmost', '1') 
-        fold = filedialog.asksaveasfile(defaultextension='.png', initialdir=os.getcwd()) # make the user choose a file location
-        root.destroy()
+        # root = tkinter.Tk()
+        # root.withdraw()  # Hide the empty main window
+        # root.call('wm', 'attributes', '.', '-topmost', '1') 
+        # fold = filedialog.asksaveasfile(defaultextension='.png', initialdir=os.getcwd()) # make the user choose a file location
+        # root.destroy()
+        
+        fold, _ = QFileDialog.getSaveFileName(
+            os.getcwd(),
+            "Save Snapshot",
+            "",
+            "PNG files (*.png)"
+        )
+        
+        
         if fold:
             figsave.savefig(fold.name) # save figure at this location
             print('Saved')
@@ -722,12 +730,17 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     # Save the movie as a tif stack (Save Movie button)
     def save_movie(event):
         # call a browser
-        root = tkinter.Tk()
-        root.withdraw()
-        root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
-        fold = filedialog.asksaveasfilename(defaultextension='.tif', initialdir=os.getcwd()) # the user choses a place in file explorer
-        root.destroy()
-        
+        # root = tkinter.Tk()
+        # root.withdraw()
+        # root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
+        # fold = filedialog.asksaveasfilename(defaultextension='.tif', initialdir=os.getcwd()) # the user choses a place in file explorer
+        # root.destroy()
+        fold, _ = QFileDialog.getSaveFileName(
+            os.getcwd(),
+            "Save Movie",
+            "",
+            "TIF files (*.tif)"
+        )
         if fold: # is the user selected a name
             if ani[0] is None:
                 Start_Animation(None) # create animation
@@ -971,13 +984,20 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         nonlocal unit_per_frame
         
         # Prepare the file explorer window
-        root = tkinter.Tk()
-        root.withdraw()
-        root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
-        # ask the user to browse to select a file
-        fname = filedialog.askopenfilename(initialdir=os.getcwd())
-        root.destroy()
+        # root = tkinter.Tk()
+        # root.withdraw()
+        # root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
+        # # ask the user to browse to select a file
+        # fname = filedialog.askopenfilename(initialdir=os.getcwd())
+        # root.destroy()
         
+        fname, _ = QFileDialog.getOpenFileName(
+            None,
+            "Open File",               # dialog title
+            "",                        # starting directory ("" = last used / home)
+            "Images (*.png *.jpg *.tif);;All Files (*)"  # filters
+        )
+        print(fname)
         if fname: 
             # get image format (tif,...)
             extension = fname.split('.')[-1]
@@ -1053,12 +1073,19 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         print('Select the directory on whoch the detection with those parameters will be applied.')
         
         # prepare file explorer window
-        root = tkinter.Tk()
-        root.withdraw()
-        root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
-        # the user select a directory
-        folder = filedialog.askdirectory(initialdir=os.getcwd())
-        root.destroy()
+        # root = tkinter.Tk()
+        # root.withdraw()
+        # root.call('wm', 'attributes', '.', '-topmost', '1')  # Bring dialog to front (optional)
+        # # the user select a directory
+        # folder = filedialog.askdirectory(initialdir=os.getcwd())
+        # root.destroy()
+        
+        folder = QFileDialog.getExistingDirectory(
+            None,
+            "Select Directory",
+            "",                                      # starting directory
+            QFileDialog.Option.ShowDirsOnly          # hide files
+        )
         
         # define coupled parameters
         d      = round(det_param[0]/4)
