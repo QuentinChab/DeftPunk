@@ -361,7 +361,7 @@ def get_anisotropy(imgpath, R=np.nan, w_size=25, d=4, av_scale=2, BoxSize=6, ord
         defect_char['MinDist'] = closest_neighbor
         ####
         
-        defect_char = defect_char[np.abs(defect_char['charge'])>0.2]
+        # defect_char = defect_char[np.abs(defect_char['charge'])>0.2]
         defect_char = defect_char.reset_index(drop=True)
         if give_field:
             return e_vec, err_vec, cost_vec, theta_vec, phi, defect_char, orientation, [x,y]
@@ -468,8 +468,11 @@ def get_anisotropy(imgpath, R=np.nan, w_size=25, d=4, av_scale=2, BoxSize=6, ord
                 defectdf = track_by_charge(defectdf, searchR, memory)
             except tp.SubnetOversizeException:
                 searchR = searchR/2
-                print('hehe actually printing with search_range half of that')
-                defectdf = track_by_charge(defectdf, searchR, memory)
+                try:
+                    defectdf = track_by_charge(defectdf, searchR, memory)
+                    print('hehe actually printing with search_range half of that')
+                except tp.SubnetOversizeException:
+                    print('No tracking performed')
         
         return e_stack, err_stack, cost_stack, theta_stack, phi_stack, defectdf
 

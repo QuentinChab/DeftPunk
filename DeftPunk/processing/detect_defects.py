@@ -88,7 +88,7 @@ def defect_detection(theta, coherency, av_scale, BoxSize, order_threshold, peak_
         angles_temp=Angle_Director[boxesp[s,0]:boxesp[s,1],boxesp[s,2]:boxesp[s,3]] #only the selected region
         cycle = np.array([*angles_temp[0,:], *angles_temp[1:,-1], *np.flip(angles_temp[-1,:-1]), *np.flip(angles_temp[1:-1,0])]) % np.pi # borders of the region
         absolute_threshold = peak_threshold#­min(0.9, max(0.5, peak_threshold*np.max(np.diff(cycle))))
-        chargeb[s]=(np.sum(np.diff(cycle)>np.pi*absolute_threshold)*(-np.pi)+np.sum(np.diff(cycle)<(-np.pi*peak_threshold))*(np.pi)+np.sum(np.diff(cycle)))/(2*np.pi) #sum(diff(cycle)) is usually 0, account for the cases where psi(theta=0)=0 
+        chargeb[s]=(np.sum(np.diff(cycle)>np.pi*absolute_threshold)*(-np.pi)+np.sum(np.diff(cycle)<(-np.pi*peak_threshold))*(np.pi)+0*np.sum(np.diff(cycle)))/(2*np.pi) #sum(diff(cycle)) is usually 0, account for the cases where psi(theta=0)=0 
         if plotall: 
             plt.figure(fdiff)
             plt.plot(np.diff(cycle)*180/np.pi, '-+', label='Detection')#, color=ccycle[s])
@@ -115,9 +115,19 @@ def defect_detection(theta, coherency, av_scale, BoxSize, order_threshold, peak_
         plt.tight_layout()
         
     if plotall:
+        b2 = 8
+        s = theta.shape
+        
+        xs = np.arange(b2//2, s[1], b2)
+        ys = np.arange(b2//2, s[0], b2)
+        X, Y = np.meshgrid(xs, ys)
+        T = theta[np.ix_(ys,xs)]
+        
         plt.figure()
         ax = plt.imshow(Qloc, cmap='Blues_r', vmin=0, vmax=1)
-        plt.quiver(np.cos(theta), np.sin(theta), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.1, units='xy', scale=1.2)
+        #plt.quiver(np.cos(theta), np.sin(theta), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.1, units='xy', scale=1.2)
+        #plt.quiver(X[int(b2/2)::b2,int(b2/2)::b2],  np.cos(theta[int(b2/2)::b2,int(b2/2)::b2]), np.sin(theta[int(b2/2)::b2,int(b2/2)::b2]), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.4, units='xy', scale=0.5)
+        plt.quiver(X, Y, np.cos(T), np.sin(T), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.4, units='xy', scale=0.5)
         plt.plot(centroidsN[:, 1], centroidsN[:,0], 'o')
         plt.colorbar(ax, label='Order Parameter')
         
@@ -125,8 +135,6 @@ def defect_detection(theta, coherency, av_scale, BoxSize, order_threshold, peak_
         cmap = ListedColormap([[255/255,255/255,255/255], [15/255,91/255,163/255]])
         plt.figure()
         ax = plt.imshow(binary_plot, cmap=cmap, interpolation='nearest')
-        s = theta.shape
-        Y, X = np.meshgrid(np.arange(s[0]),np.arange(s[1]))
         # plt.quiver(np.cos(theta), np.sin(theta), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.1, units='xy', scale=1.2)
         b2 = 2      
         # plt.quiver(X[int(b2/2)::b2,int(b2/2)::b2], Y[int(b2/2)::b2,int(b2/2)::b2], np.cos(theta[int(b2/2)::b2,int(b2/2)::b2]), np.sin(theta[int(b2/2)::b2,int(b2/2)::b2]), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=0.1, units='xy', scale=1.2)
@@ -134,7 +142,7 @@ def defect_detection(theta, coherency, av_scale, BoxSize, order_threshold, peak_
         # plt.quiver(X[int(b2/2)::b2,int(b2/2)::b2], Y[int(b2/2)::b2,int(b2/2)::b2], np.cos(theta[int(b2/2)::b2,int(b2/2)::b2]), np.sin(theta[int(b2/2)::b2,int(b2/2)::b2]), angles='xy', headaxislength=0, headlength=0, pivot='mid', width=1, units='xy', scale=.1)
         plt.plot(centroidsN[:, 1], centroidsN[:,0], 'o', color='white', markersize='6')
         for s in range(len(chargeb)):
-            plt.plot([boxesp[s,2],boxesp[s,3]-1,boxesp[s,3]-1,boxesp[s,2]], [boxesp[s,0],boxesp[s,0],boxesp[s,1]-1,boxesp[s,1]-1])
+            plt.plot([boxesp[s,2],boxesp[s,3]-1,boxesp[s,3]-1,boxesp[s,2],boxesp[s,2]], [boxesp[s,0],boxesp[s,0],boxesp[s,1]-1,boxesp[s,1]-1,boxesp[s,0]])
             plt.annotate('%.0f: %.1f'%(s,chargeb[s]),(boxesp[s,2],boxesp[s,0]))
         # plt.colorbar(ax)
     #compute orientation of the defect axis
