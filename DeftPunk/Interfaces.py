@@ -159,13 +159,17 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     R    = det_param[1]
     over = False
     
+    # Couplings
+    wf              = 1.5 # w_size = wf*f
+    fd              = 4   # d = f/fd
+    av_scale        = 2 # in units of d. Size of filter for nematic order parameter computation
+    BoxSize         = 6 # in units of d
+    peak_threshold  = 0.75 # jump threshold = peak_threshold*180° 
+    
     ### All necessary detection parameters. The 3 selected ones (f, R, o) define all others: ####
-    w_size          = round(1.5*w) #integration size for orientation field
-    d               = round(w/4)   # DownSampling size for orientation field
-    av_scale        = 2            # in units of d. Size of filter for nematic order parameter computation
+    w_size          = round(wf*w) #integration size for orientation field
+    d               = round(w/fd)   # DownSampling size for orientation field 
     order_threshold = det_param[2]
-    BoxSize         = 6
-    peak_threshold  = 0.75
     
     # if the director field is an input, we lock it: it is never re-computed
     if not (vfield is None):
@@ -290,12 +294,9 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
             w_slider.label.set_text('Feature size [px] (%.2f '%(um_per_px*w_slider.val)+unit+')')
         
         # update parameter values
-        w_size          = round(1.5*w_slider.val) #integration size for orientation field
-        d               = round(w_slider.val/4) # Sampling size for orientation field
-        av_scale        = 2 # in units of bin. Size of filter for order parameter
+        w_size          = round(wf*w_slider.val) #integration size for orientation field
+        d               = round(w_slider.val/fd) # Sampling size for orientation field
         order_threshold = Thresh_slider.val
-        BoxSize         = 6
-        peak_threshold  = 0.75
         
         if lock_field:
             input_field = vfield
@@ -318,7 +319,7 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
         # get useful parameter values
         field = my_field[0]
-        d     = round(w_slider.val/4) # Sampling size for orientation field
+        d     = round(w_slider.val/fd) # Sampling size for orientation field
         
         # to store the newly computed anisotropies 
         new_anisotropy = np.empty(len(defect_char))*np.nan
@@ -343,12 +344,9 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         nonlocal vfield
         
         # update parameter values
-        w_size          = round(1.5*w_slider.val) #integration size for orientation field
-        d               = round(w_slider.val/4) # Sampling size for orientation field
-        av_scale        = 2 # in units of bin. Size of filter for order parameter
+        w_size          = round(wf*w_slider.val) #integration size for orientation field
+        d               = round(w_slider.val/fd) # Sampling size for orientation field
         order_threshold = Thresh_slider.val
-        BoxSize         = 6
-        peak_threshold  = 0.75
         if lock_field:
             input_field = vfield
         else:
@@ -399,14 +397,14 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
         
         
-        w_size = round(1.5*w_slider.val) #integration size for orientation field
-        d = round(w_slider.val/4) # Sampling size for orientation field
+        w_size = round(wf*w_slider.val) #integration size for orientation field
+        d = round(w_slider.val/fd) # Sampling size for orientation field
         
         over = True
         # If the image is a stack, perform detection for each frame
         if stack:
             print('Computing the whole stack...')
-            e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = pc.get_anisotropy(imgpath, R_slider.val, round(1.5*w_slider.val), round(w_slider.val/4), av_scale, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
+            e_vec, err_vec, cost_vec, theta_vec, phi, defect_char = pc.get_anisotropy(imgpath, R_slider.val, round(wf*w_slider.val), round(w_slider.val/fd), av_scale, BoxSize, Thresh_slider.val, peak_threshold, plotit=False, stack=stack, savedir = None)
         plt.close(fig)
         
         if endsave:
@@ -1088,8 +1086,8 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         )
         
         # define coupled parameters
-        d      = round(det_param[0]/4)
-        w_size = round(1.5*det_param[0])
+        d      = round(det_param[0]/fd)
+        w_size = round(wf*det_param[0])
         
         #Loop over files
         for filename in os.listdir(folder):
@@ -1098,7 +1096,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
 
             if filename.split('.')[-1].lower() in ['tif', 'tiff', 'png', 'jpg', 'bmp', 'jpeg']: # only those format are supported
                 # detection function
-                e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = pc.get_anisotropy(folder+os.sep+filename, det_param[1], w_size, d, 2, 6, det_param[2], 0.75, plotit=False, stack=stack, savedir = None)
+                e_vec, err_vec, cost_vec, theta_vec, phi, defect_table = pc.get_anisotropy(folder+os.sep+filename, det_param[1], w_size, d, av_scale, BoxSize, det_param[2], peak_threshold, plotit=False, stack=stack, savedir = None)
                 
                 defect_table.to_csv(folder+os.sep+'data_'+'.'.join(filename.split('.')[:-1])+'.csv')
                 
@@ -1148,7 +1146,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         # Compute average defect: crop image around defect, rotate them and average all intensities
         ppattern, mpattern = an.defect_pattern(img, defect_char)
         # compute director field of the average +1/2 defect
-        orientation, coherence, ene, X, Y = pc.orientation_analysis(ppattern, w_size=round(1.5*f), binning=round(f/4), plotf=False)
+        orientation, coherence, ene, X, Y = pc.orientation_analysis(ppattern, w_size=round(wf*f), binning=round(f/fd), plotf=False)
         # compute the director field profile of this average defect
         phi, theta_unit = pc.compute_angle_diagram(orientation, R)
         # commpute anisotropy 
@@ -1157,7 +1155,7 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         # plot average +1/2 defect with director field
         plt.figure()
         plt.imshow(ppattern, cmap='binary')
-        plt.quiver(X, Y, np.cos(orientation), np.sin(orientation), angles='xy', scale=1/round(f/4), width=0.5, headaxislength=0, headlength=0, pivot='mid', color='red', units='xy')
+        plt.quiver(X, Y, np.cos(orientation), np.sin(orientation), angles='xy', scale=1/round(f/fd), width=0.5, headaxislength=0, headlength=0, pivot='mid', color='red', units='xy')
         sh = ppattern.shape
         plt.plot(sh[0]/2+R*np.cos(phi), sh[1]/2+R*np.sin(phi))
         

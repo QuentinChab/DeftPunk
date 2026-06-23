@@ -161,7 +161,9 @@ Here is the description of the detection parameters:
     R is the radius of the circular contour
     it should be as large as possible to reduce uncertainty
     it should not detect director deformation due to features other than the defect
-    
+
+If you want to change the couplings and preset parameters inside the interface, they are defined in the DeftPunk/Interfaces.py script, line 162 to 167 (23/06/2026)
+
 Here are the tracking parameters:
 - search_range sR:
     in pixel, the maximum defect displacement between two frames
