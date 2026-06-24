@@ -36,4 +36,4 @@ include = ["DeftPunk*"]
 include-package-data = true
 
 [tool.setuptools.package-data]
-"DeftPunk" = ["GUI_images/*.jpg", "GUI_images/*.png", "/home/quentin/DeftPunk/DeftPunk/processing/ref_epsilon/*.npy"]
+"DeftPunk" = ["GUI_images/*.jpg", "GUI_images/*.png", "processing/ref_epsilon/*.npy"]

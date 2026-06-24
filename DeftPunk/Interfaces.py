@@ -32,7 +32,8 @@ import trackpy as tp
 from matplotlib.animation import FuncAnimation
 import scipy.io
 import os
-origin_file = os.path.abspath( os.path.dirname( __file__ ) )
+from importlib.resources import files
+#origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 
 def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='px', vfield=None, endsave=True, savedir='Select'):
@@ -218,13 +219,15 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
 
     # draw the legend
     axlegend = fig.add_axes([0.32, 0.87, 0.5, 0.13])
-    imlegend = plt.imread(origin_file+os.sep+'GUI_images'+os.sep+'defect_type.png')
+    #imlegend = plt.imread(origin_file+os.sep+'GUI_images'+os.sep+'defect_type.png')
+    imlegend = plt.imread(files('DeftPunk').joinpath('GUI_images'+os.sep+'defect_type.png'))
     axlegend.imshow(imlegend)
     axlegend.axis('off')
     
     # draw the schematics of the defects with different anisotropy
     axschem = fig.add_axes([0.9, 0.19, 0.1, 0.7])
-    imschem = plt.imread(origin_file+os.sep+'GUI_images'+os.sep+'defect_style.png')
+    # imschem = plt.imread(origin_file+os.sep+'GUI_images'+os.sep+'defect_style.png')
+    imschem = plt.imread(files('DeftPunk').joinpath('GUI_images'+os.sep+'defect_style.png'))
     axschem.imshow(imschem)
     axschem.axis('off')
     
@@ -926,7 +929,8 @@ def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
         img, stack, _ = gu.load_image(filename)
         ax.imshow(img, cmap='binary')
     else:
-        img = plt.imread(origin_file+os.sep+'GUI_images'+os.sep+'spot_defect.jpg') # the welcome image (currently a meme)
+        #img = plt.imread(origin_file+os.sep+'GUI_images'+os.sep+'spot_defect.jpg') # the welcome image (currently a meme)
+        img = plt.imread(files('DeftPunk').joinpath('GUI_images'+os.sep+'spot_defect.jpg'))
         ax.imshow(img, cmap='binary')
     plt.title('Image displayed for\n parameter choice')
     

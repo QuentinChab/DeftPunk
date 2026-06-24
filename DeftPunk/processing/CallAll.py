@@ -31,6 +31,8 @@ from DeftPunk.processing.OrientationPy import orientation_analysis
 from DeftPunk.processing.detect_defects import defect_detection
 from DeftPunk.processing.compute_anisotropy import compute_angle_diagram, anisotropy_comparison, track_by_charge, reference_profile
 from DeftPunk.GUI_utils import load_image
+
+from importlib.resources import files
 # from .OrientationPy import orientation_analysis
 # from .detect_defects import defect_detection
 # from .compute_anisotropy import compute_angle_diagram, anisotropy_comparison, track_by_charge, reference_profile
@@ -126,11 +128,13 @@ def one_defect_anisotropy(field, R, xc=None, yc=None, axis = 0, err = 0.05, plot
         plt.xlabel('Anisotropy []')
         plt.ylabel('Cost [rad]')
         plt.tight_layout()
-        __file__ = '/home/quentin/DeftPunk/DeftPunk/processing/opo'
+        # __file__ ^unk/DeftPunk/processing/opo'
         plt.subplot(1,2,2)
         plt.plot(phi_cycle, th_min, 'o', label='Measure')
-        fpath = os.path.abspath(__file__)
-        th_ref = np.load(os.sep.join(fpath.split(os.sep)[:-1])+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
+        # fpath = os.path.abspath(__file__)
+        # th_ref = np.load(os.sep.join(fpath.split(os.sep)[:-1])+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
+        fpath = files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(emin))
+        th_ref = np.load(fpath)
         plt.plot(phi_cycle, th_ref, '--', label='Reference')
         plt.xlabel('Azimuthal angle [rad]')
         plt.ylabel('Director angle [rad]')
@@ -255,11 +259,13 @@ def get_anisotropy(imgpath, R=np.nan, w_size=25, d=4, av_scale=2, BoxSize=6, ord
 
         else:
             img = np.ones(prescribed_field.shape)*np.nan
-        __file__ = '/home/quentin/DeftPunk/DeftPunk/processing/opo'
+        # __file__ = './DeftPunk/DeftPunk/processing/opo'
         ## Anisotropy computation 
         # Azimuthal coordinates
-        fpath = os.path.abspath(__file__)
-        phi = np.load(os.sep.join(fpath.split(os.sep)[:-1])+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+        # fpath   = os.path.abspath(__file__)
+        # phi     = np.load(os.sep.join(fpath.split(os.sep)[:-1])+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+        fpath   = files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+        phi     = np.load(fpath)
         
         # will contain the anisotropy-related quantities
         e_vec       = [] # Anisotropy

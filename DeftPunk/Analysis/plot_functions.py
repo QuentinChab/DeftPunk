@@ -16,6 +16,7 @@ from matplotlib.colors import Normalize
 from matplotlib.backends.backend_agg import FigureCanvasAgg
 import trackpy as tp
 import os
+from importlib.resources import files
 
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
@@ -147,14 +148,19 @@ def plot_profiles(theta, e_vec, err_vec, individual = False):
 
     """
     
-    phi = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+    # phi = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+    fpath = files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+    phi   = np.load(fpath)
     
     if individual:
         fs = []
         for i in range(len(e_vec)):
-            refth = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e_vec[i]))
-            thpstd = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(min(1,e_vec[i]+err_vec[i])))
-            thmstd = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(max(-1,e_vec[i]-err_vec[i])))
+            # refth = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e_vec[i]))
+            # thpstd = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(min(1,e_vec[i]+err_vec[i])))
+            # thmstd = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(max(-1,e_vec[i]-err_vec[i])))
+            refth = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e_vec[i])))
+            thpstd = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(min(1,e_vec[i]+err_vec[i]))))
+            thmstd = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(max(-1,e_vec[i]-err_vec[i]))))
             
             f = plt.figure()
             plt.plot(phi, theta[i], 'o')
@@ -174,9 +180,12 @@ def plot_profiles(theta, e_vec, err_vec, individual = False):
         em = np.mean(e_vec)
         f2 = plt.figure()
         
-        ref_av = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(em))
-        std_ref_up = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(min(1,em+maxdev/3)))
-        std_ref_down = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(max(-1,em-maxdev/3)))
+        # ref_av = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(em))
+        # std_ref_up = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(min(1,em+maxdev/3)))
+        # std_ref_down = np.load('.'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(max(-1,em-maxdev/3)))
+        ref_av = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(em)))
+        std_ref_up = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(min(1,em+maxdev/3))))
+        std_ref_down = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(max(-1,em-maxdev/3))))
         
         for i in range(len(e_vec)):
             plt.plot(phi, theta[i], '.', color=colorm(np.abs(e_vec[i]-em)/maxdev))

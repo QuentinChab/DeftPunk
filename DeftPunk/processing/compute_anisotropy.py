@@ -23,6 +23,7 @@ import matplotlib.pyplot as plt
 import os
 import trackpy as tp
 import scipy
+from importlib.resources import files
 
 plt.rcParams.update({'font.size': 16})
 origin_file = os.path.abspath( os.path.dirname( __file__ ) )
@@ -60,7 +61,8 @@ def compute_angle_diagram(orientation, R, center=None, axis=0, plotthis = False,
     
     ### Define the contour where we will interpolate director field
     #Load the reference phi
-    phi = np.load(origin_file+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+    # phi = np.load(origin_file+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+    phi = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy'))
     th_test = np.copy(orientation)
     s = orientation.shape
     x = np.arange(0, s[1])
@@ -128,15 +130,24 @@ def anisotropy_comparison(phi, theta, R=np.nan, path = 'DeftPunk'+os.sep+'proces
     if np.all(np.isnan(theta)):
         return [np.nan], [np.nan]
     if np.isnan(R):
-        path = origin_file+os.sep+'ref_epsilon'+os.sep
-        es = np.load(path + 'e_vec.npy')
-        phi_ref = np.load(path + 'orientationAzimuthal.npy')
+        # path = origin_file+os.sep+'ref_epsilon'+os.sep
+        path1 = files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'e_vec.npy')
+        # es = np.load(path + 'e_vec.npy')
+        es = np.load(path1)
+        # phi_ref = np.load(path + 'orientationAzimuthal.npy')
+        path2 = files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+        phi_ref = np.load(path2)
         costs = np.ones(es.shape)
     else:
-        path = origin_file+os.sep+'ref_epsilon'+os.sep
-        es = np.load(path + 'e_vec.npy')
-        phi_ref = np.load(path + 'orientationAzimuthal.npy')
-        xshift= np.load(path + os.sep + 'xshift.npy')
+        # path = origin_file+os.sep+'ref_epsilon'+os.sep
+        # es = np.load(path + 'e_vec.npy')
+        # phi_ref = np.load(path + 'orientationAzimuthal.npy')
+        # xshift= np.load(path + os.sep + 'xshift.npy')
+        
+        # path = origin_file+os.sep+'ref_epsilon'+os.sep
+        es = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'e_vec.npy'))
+        phi_ref = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy'))
+        xshift= np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'xshift.npy'))
         costs = np.ones((len(es), len(xshift)))
     
     
@@ -148,7 +159,8 @@ def anisotropy_comparison(phi, theta, R=np.nan, path = 'DeftPunk'+os.sep+'proces
     if np.isnan(R):
         #safe = np.logical_and(phi>0.1, np.abs(phi-np.pi)>0.1, phi<6)
         for i in range(len(es)):
-            th_ref = np.load(path+'orientationTheta_e%.2f.npy'%(es[i]))
+            # th_ref = np.load(path+'orientationTheta_e%.2f.npy'%(es[i]))
+            th_ref = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(es[i])))
             if not same:
                 th_interp = scipy.interpolate.interp1d(phi_ref, th_ref)
                 th_ref = th_interp(phi)
@@ -161,7 +173,8 @@ def anisotropy_comparison(phi, theta, R=np.nan, path = 'DeftPunk'+os.sep+'proces
     else:
         for i in range(len(es)):
             for j in range(len(xshift)):
-                th_ref = np.load(path+'R%.0f'%(R)+os.sep+'Theta_e%.2f_xshift%.2f.npy'%(es[i], xshift[j]))
+                # th_ref = np.load(path+'R%.0f'%(R)+os.sep+'Theta_e%.2f_xshift%.2f.npy'%(es[i], xshift[j]))
+                th_ref = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'R%.0f'%(R)+os.sep+'Theta_e%.2f_xshift%.2f.npy'%(es[i], xshift[j])))
                 if not same:
                     th_interp = scipy.interpolate.interp1d(phi_ref, th_ref)
                     th_ref = th_interp(phi)
@@ -205,15 +218,16 @@ def reference_profile(e):
 
     """
     if np.isnan(e):
-        phi = np.load('DeftPunk'+os.sep+'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+        # phi = np.load('DeftPunk'+os.sep+'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy')
+        phi = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationAzimuthal.npy'))
         ref_th = np.ones(phi.shape)*np.nan
     else:
         if np.abs(e)<0.01:
             e = 0.
             ref_th = phi/2
         else:
-            ref_th = np.load('DeftPunk'+os.sep+'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e))
-    
+            # ref_th = np.load('DeftPunk'+os.sep+'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e))
+            ref_th = np.load(files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep+'orientationTheta_e%.2f.npy'%(e)))
     return ref_th        
         
 def crop_rotate_scalar(field, axis, cropsize, xcenter=None, ycenter=None, mask=False):
