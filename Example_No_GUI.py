@@ -19,7 +19,8 @@ from DeftPunk import analyze_image, get_anisotropy, trackmap
 
 # pathes
 imgpath     = os.getcwd()+os.sep+'MT_kinesin_blue.tif'
-savedir     = '/home/quentin/Documents'# Path to where you want to save data/image outputs
+#savedir     = '/home/quentin/Documents'# Path to where you want to save data/image outputs
+savedir     = './Documents'
 framesave   = savedir+os.sep+'frames' 
 stack       = True
 
