@@ -21,7 +21,8 @@ dependencies = [
   "tifffile",
   "trackpy",
   "scipy",
-  "qtpy"
+  "qtpy",
+  "pyqt5"	
 ]
 
 [project.optional-dependencies]

@@ -36,6 +36,9 @@ from importlib.resources import files
 #origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
 
+def estimate_bias(R,f):
+    return np.abs( 1 - 1 / (1-1.5*f/R) ) *100
+
 def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='px', vfield=None, endsave=True, savedir='Select'):
     """
     Calls the interface to analyze defect and their anisotropy on an image
@@ -281,6 +284,15 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         orientation = "vertical"
         )
     
+    
+    ## textbox for bias   
+    # Text box in the bottom-left corner of the figure
+    text_box = fig.text(
+        0.05, 0.15,                       # x, y in figure coordinates (0-1)
+        f"Estimated anisotropy bias: {estimate_bias(R_slider.val, w_slider.val):.0f}%\neq. 11 Chaboche et al., Soft Matter, 2026",
+        fontsize=13,
+        bbox=dict(boxstyle="round", facecolor="white",  alpha=0.8)
+    )
  
     
     ## Update functions for sliders 
@@ -313,6 +325,10 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         my_field[0] = field
         my_field[1] = pos
         
+        result = estimate_bias(R_slider.val, w_slider.val)
+        text_box.set_text(f"Estimated anisotropy bias: {result:.0f}% \neq. 11 Chaboche et al., Soft Matter, 2026")
+        fig.canvas.draw_idle()
+        
         gu.update_display(pos, fig, art_vec, R_vec, field, ax, R_slider.val, dchar, d)
     
     # update function for detection radius. Only anisotropy is changed
@@ -338,6 +354,9 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
         
         
         # update display
+        result = estimate_bias(R_slider.val, w_slider.val)
+        text_box.set_text(f"Estimated anisotropy bias: {result:.0f}%\neq. 11 Chaboche et al., Soft Matter, 2026")
+        fig.canvas.draw_idle()
         gu.update_display(pos, fig, art_vec, R_vec, vfield, ax, R_slider.val, defect_char, d)
         
     # update function for order_threshold. Defect detection is changed but not 
@@ -846,7 +865,7 @@ def check_tracking(imgpath, deftab_, track_param = [None, None, 0]):
     
     return defect_char, track_param, [loopbutton, databutton, moviebutton, okbutton, startbutton]
             
-def detect_defect_GUI(f_in=15, R_in=10, fname_in=None, frame_in=0):
+def detect_defect_GUI(f_in=6, R_in=60, fname_in=None, frame_in=0):
     """
     Interface that allows to load an image and call the different other
     interfaces that performs detection etc.
