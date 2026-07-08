@@ -124,7 +124,7 @@ def compute_angle_diagram(orientation, R, center=None, axis=0, plotthis = False,
     
     return phi, theta_unit
 
-def anisotropy_comparison(phi, theta, R=np.nan, path = 'DeftPunk'+os.sep+'processing'+os.sep+'ref_epsilon_shift'+os.sep):#r'.\ref_epsilon\\'
+def anisotropy_comparison(phi, theta, R=np.nan, path = files('DeftPunk').joinpath('processing'+os.sep+'ref_epsilon'+os.sep)):
 
 
     if np.all(np.isnan(theta)):
