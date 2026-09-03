@@ -16,6 +16,7 @@ parameters for detection of defect location and anisotropy.
 
 Part of DeftPunk package
 """
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 import datetime
@@ -26,7 +27,7 @@ import DeftPunk.Analysis as an
 import DeftPunk.GUI_utils as gu
 import tifffile as tf
 from matplotlib import cm
-from qtpy.QtWidgets import QFileDialog
+from qtpy.QtWidgets import QFileDialog, QApplication
 from matplotlib.colors import Normalize
 import trackpy as tp
 from matplotlib.animation import FuncAnimation
@@ -35,6 +36,12 @@ import os
 from importlib.resources import files
 #origin_file = os.path.abspath( os.path.dirname( __file__ ) )
 
+
+wf              = 1.5 # w_size = wf*f
+fd              = 4   # d = f/fd
+av_scale        = 2 # in units of d. Size of filter for nematic order parameter computation
+BoxSize         = 6 # in units of d
+peak_threshold  = 0.75 # jump threshold = peak_threshold*180° 
 
 def estimate_bias(R,f):
     return np.abs( 1 - 1 / (1-1.5*f/R) ) *100
@@ -163,12 +170,12 @@ def defect_analyzer(imgpath, det_param, stack=True, frame=0, um_per_px=1, unit='
     R    = det_param[1]
     over = False
     
-    # Couplings
-    wf              = 1.5 # w_size = wf*f
-    fd              = 4   # d = f/fd
-    av_scale        = 2 # in units of d. Size of filter for nematic order parameter computation
-    BoxSize         = 6 # in units of d
-    peak_threshold  = 0.75 # jump threshold = peak_threshold*180° 
+    ## Couplings
+    # wf              = 1.5 # w_size = wf*f
+    # fd              = 4   # d = f/fd
+    # av_scale        = 2 # in units of d. Size of filter for nematic order parameter computation
+    # BoxSize         = 6 # in units of d
+    # peak_threshold  = 0.75 # jump threshold = peak_threshold*180° 
     
     ### All necessary detection parameters. The 3 selected ones (f, R, o) define all others: ####
     w_size          = round(wf*w) #integration size for orientation field
@@ -922,6 +929,10 @@ def detect_defect_GUI(f_in=6, R_in=60, fname_in=None, frame_in=0):
     
     ##################### Initialization ####################################
     
+    app = QApplication.instance()
+    if app is None:
+        app = QApplication(sys.argv)
+    
     # for cross-GUI communication
     global defect_char
     
@@ -1260,6 +1271,8 @@ def detect_defect_GUI(f_in=6, R_in=60, fname_in=None, frame_in=0):
     plt.show()
     # while plt.fignum_exists(fig.number):
     #     plt.pause(0.1)
+    
+    app.exec_()
     
     return [loadbutton, trackbutton, savebutton, detbutton, dirbutton, unitBox, uppxBox, unittBox, fpsBox, keep]# statbutton, keep]
         
